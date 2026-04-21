@@ -96,7 +96,7 @@ export default function ConsoMoyenneVehiculePage() {
 
 
   // -------------------------------------------------------------------------
-  // Soumission du formulaire de dates ss
+  // Soumission du formulaire de dates 
   // -------------------------------------------------------------------------
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
