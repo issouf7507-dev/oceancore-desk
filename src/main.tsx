@@ -10,7 +10,7 @@ createRoot(document.getElementById('root')!).render(
     <AuthProvider>
 
       <AppRoutes />
-      {/* </AuthInit> */}
+
       <Toaster />
     </AuthProvider>
   </StrictMode>,
