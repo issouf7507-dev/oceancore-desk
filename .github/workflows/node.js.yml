@@ -3,7 +3,7 @@ name: Build & Deploy
 on:
   push:
     branches:
-      - dev-issouf
+      - dev-marabu-issouf
 
 jobs:
   build-and-deploy:
@@ -48,7 +48,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           source: "dist/*"
-          target: /home/admin_marabu/ocean-front/oceancore-desk
+          target: /home/admin_marabu/ocean-front/oceancore-desk-client
           strip_components: 1
           rm: true
 
