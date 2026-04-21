@@ -88,7 +88,8 @@ export function Login() {
         <h1 className="text-xl font-bold text-green-500 tracking-wider">Ocean Transport Core</h1>
       }
       title="Bienvenue!"
-      description="Connectez-vous en entrant les informations ci-dessous manager@ocean.services mdpmanager@@"
+      description="Connectez-vous en entrant les informations ci-dessous"
+      // description="Connectez-vous en entrant les informations ci-dessous manager@ocean.services mdpmanager@@"
       imageSrc={loginO}
       imageAlt="Une belle scène avec des collines et une route."
       onSubmit={handleLogin}
