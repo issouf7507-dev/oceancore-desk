@@ -58,6 +58,6 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            sudo chown -R www-data:www-data /home/admin_marabu/ocean-front/oceancore-desk
-            sudo chmod -R 755 /home/admin_marabu/ocean-front/oceancore-desk
+          # script: |
+          #   chown -R www-data:www-data /home/admin_marabu/ocean-front/oceancore-desk
+          #   chmod -R 755 /home/admin_marabu/ocean-front/oceancore-desk
