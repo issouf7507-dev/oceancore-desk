@@ -4,6 +4,9 @@ import { AuthFormSplitScreen } from "@/components/ui/login";
 import z from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'sonner';
+import { useState } from 'react';
+import loginO from "../../../assets/ocean-corsa.webp"
 
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email." }),
@@ -26,7 +29,7 @@ export function Login() {
   });
   const navigate = useNavigate()
   const { saveAuth, setCurrentUser } = useAuth()
-
+  const [errorForm, setErrorForm] = useState(false)
   const handleLogin = async (data: FormValues) => {
     try {
       if (!data.email.trim() || !data.password.trim()) {
@@ -50,15 +53,26 @@ export function Login() {
 
       if (!response.ok) {
         const text = await response.text().catch(() => "")
+
+        console.log("error response", response);
+        setErrorForm(true)
+
+        toast("Erreur lors de l'authentification")
+
         throw new Error(
           `Login failed (${response.status}). ${text ? `Details: ${text}` : ""}`.trim()
         )
+
       }
 
       const payload = (await response.json()) as {
         token: string
         user: { id: number; name: string; email: string; roles?: string[] }
       }
+
+      console.log(payload);
+
+
 
       saveAuth({ api_token: payload.token, user: payload.user })
       setCurrentUser(payload.user)
@@ -74,13 +88,16 @@ export function Login() {
         <h1 className="text-xl font-bold text-green-500 tracking-wider">Ocean Transport Core</h1>
       }
       title="Bienvenue!"
-      description="Connectez-vous en entrant les informations ci-dessous"
-      imageSrc="https://images.unsplash.com/photo-1714715350295-5f00e902f0d7?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8d2FsbHBhZXJ8ZW58MHwxfDB8fHww&auto=format&fit=crop&q=60&w=900"
+      description="Connectez-vous en entrant les informations ci-dessous manager@ocean.services mdpmanager@@"
+      imageSrc={loginO}
       imageAlt="Une belle scène avec des collines et une route."
       onSubmit={handleLogin}
       forgotPasswordHref="#"
       createAccountHref="#"
       form={form}
+
+      errorForm={errorForm}
+      setErrorForm={setErrorForm}
     />
   )
 }

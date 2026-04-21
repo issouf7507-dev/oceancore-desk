@@ -38,6 +38,8 @@ interface AuthFormSplitScreenProps {
   forgotPasswordHref: string;
   createAccountHref: string;
   form: UseFormReturn<FormValues>;
+  errorForm: boolean
+  setErrorForm: (errorForm: boolean) => void
 }
 
 /**
@@ -61,8 +63,11 @@ export function AuthFormSplitScreen({
   forgotPasswordHref,
   createAccountHref,
   form,
+  errorForm,
+  setErrorForm
 }: AuthFormSplitScreenProps) {
   const [isLoading, setIsLoading] = React.useState(false);
+
 
 
 
@@ -95,7 +100,7 @@ export function AuthFormSplitScreen({
   };
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col md:flex-row ">
+    <div className="relative flex h-screen w-full flex-col md:flex-row ">
       {/* Left Panel: Form */}
       <div className="flex w-full flex-col items-center justify-center  p-8 md:w-1/2">
         <div className="w-full max-w-md">
@@ -124,7 +129,7 @@ export function AuthFormSplitScreen({
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Email Address</FormLabel>
+                        <FormLabel>Email </FormLabel>
                         <FormControl>
                           <Input
                             placeholder="email@example.com"
@@ -144,7 +149,7 @@ export function AuthFormSplitScreen({
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Password</FormLabel>
+                        <FormLabel>Mot de passe</FormLabel>
                         <FormControl>
                           <Input
                             type="password"
@@ -177,18 +182,18 @@ export function AuthFormSplitScreen({
                         </FormControl>
                         <div className="space-y-1 leading-none">
                           <FormLabel className="font-normal">
-                            Remember Me
+                            Se Souvenir de moi
                           </FormLabel>
                         </div>
                       </FormItem>
                     )}
                   />
-                  <a
+                  {/* <a
                     href={forgotPasswordHref}
                     className="text-sm font-medium text-primary hover:underline"
                   >
                     Forgotten Password
-                  </a>
+                  </a> */}
                 </motion.div>
 
                 <motion.div variants={itemVariants}>
@@ -196,31 +201,40 @@ export function AuthFormSplitScreen({
                     {isLoading && (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     )}
-                    Continue
+                    Continuer
                   </Button>
                 </motion.div>
               </form>
             </Form>
 
+
+            {errorForm && <div className="text-center">
+              <p className="text-red-500">Une erreur c'est produite, verifier au identifiant</p>
+            </div>}
+
+
+
+
             <motion.p
               variants={itemVariants}
               className="px-8 text-center text-sm text-muted-foreground"
             >
-              Don't have an account?{" "}
+              Vous n'avez pas de compte?{" "}
               <a
                 href={createAccountHref}
                 className="font-medium text-primary hover:underline"
               >
-                Create one here
+                Contacter le support.
               </a>
-              .
+
             </motion.p>
           </motion.div>
         </div>
+
       </div>
 
       {/* Right Panel: Image */}
-      <div className="relative hidden w-1/2 md:block">
+      <div className="relative hidden w-1/2 md:block ">
         <img
           src={imageSrc}
           alt={imageAlt}

@@ -22,6 +22,19 @@ export type DashboardKpisNormalized = {
     conso_l_100km: number;
     km_total: number;
     immatriculation: string;
+
+    // conso_l_100km
+    // :
+    // 25
+    // immatriculation
+    // :
+    // "3611LE01"
+    // total_km
+    // :
+    // 300
+    // vehicule_id
+    // :
+    // 8
   }>;
   kpi5_indice_anomalie_trips: Array<{
     nb_anomalies: number;
@@ -248,6 +261,843 @@ export async function fetchDashboardKpis(
       nb_total: toNumber(kpi10.nb_total),
       nb_non_actifs: toNumber(kpi10.nb_non_actifs),
     },
+  };
+
+  return normalized;
+}
+
+type DashboardKpi1Response = {
+  period?: { start?: string; end?: string };
+  data?: {
+    conso_l_100km: number;
+    from_fuel_logs: number;
+    total_litres: number;
+    total_km: number;
+  };
+  series?: {
+    date: string;
+    conso_l_100km: number;
+    total_litres: number;
+    total_km: number;
+    nb_voyages: number;
+  }[];
+
+  meta: {
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
+};
+
+export type DashboardKpi1Normalized = {
+  kpi: {
+    conso_l_100km: number;
+    date: string;
+    nb_voyages: number;
+    total_km: number;
+    total_litres: number;
+  }[];
+
+  period: {
+    start: string;
+    end: string;
+  };
+  meta: {
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
+};
+
+export async function fetchDashboardKpi_1(
+  token: string,
+  // page = 1,
+  params: {
+    page?: number;
+    start?: string;
+    end?: string;
+    per_page?: number;
+  } = {},
+): Promise<DashboardKpi1Normalized> {
+  const base = `${import.meta.env.VITE_API_URL}`.replace(/\/+$/, "");
+
+  const query = new URLSearchParams();
+  if (params.page) query.set("page", String(params.page));
+  if (params.per_page) query.set("per_page", String(params.per_page));
+  if (params.start) query.set("start", params.start);
+  if (params.end) query.set("end", params.end);
+
+  const response = await fetch(`${base}/api/v1/kpis/1?${query.toString()}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(
+      `Failed to fetch KPIs (${response.status}). ${text ? `Details: ${text}` : ""}`.trim(),
+    );
+  }
+  const json = (await response.json()) as DashboardKpi1Response;
+
+  const periodStart = asString(json.period?.start);
+  const periodEnd = asString(json.period?.end);
+
+  const series_journaliere = Array.isArray(json.series)
+    ? json.series.map((p: any) => ({
+        date: asString(p.date),
+        conso_l_100km: toNumber(p.conso_l_100km),
+        total_litres: toNumber(p.total_litres),
+        total_km: toNumber(p.total_km),
+        nb_voyages: toNumber(p.nb_voyages),
+      }))
+    : [];
+
+  const meta = json.meta;
+
+  const normalized: DashboardKpi1Normalized = {
+    period: { start: periodStart, end: periodEnd },
+    kpi: series_journaliere,
+    meta: meta,
+  };
+
+  return normalized;
+}
+
+type DashboardKpi2Response = {
+  period?: { start?: string; end?: string };
+  data?: {
+    total_litres: number;
+    from_fuel_logs: number;
+  };
+};
+
+export type DashboardKpi2Normalized = {
+  period: {
+    start: string;
+    end: string;
+  };
+  kpi: {
+    total_litres: number;
+    from_fuel_logs: number;
+  };
+};
+
+export async function fetchDashboardKpi_2(
+  token: string,
+): Promise<DashboardKpi2Normalized> {
+  const base = `${import.meta.env.VITE_API_URL}`.replace(/\/+$/, "");
+  const response = await fetch(`${base}/api/v1/kpis/2`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(
+      `Failed to fetch KPIs (${response.status}). ${text ? `Details: ${text}` : ""}`.trim(),
+    );
+  }
+  const json = (await response.json()) as DashboardKpi2Response;
+
+  const data = json.data!;
+  const periodStart = asString(json.period?.start);
+  const periodEnd = asString(json.period?.end);
+
+  const normalized: DashboardKpi2Normalized = {
+    period: { start: periodStart, end: periodEnd },
+    kpi: data,
+  };
+
+  return normalized;
+}
+
+type DashboardKpi3Response = {
+  period?: { start?: string; end?: string };
+  data?: {
+    from_fuel_logs: number;
+    total_fcfa: number;
+  };
+};
+
+export type DashboardKpi3Normalized = {
+  period: {
+    start: string;
+    end: string;
+  };
+  kpi: {
+    from_fuel_logs: number;
+    total_fcfa: number;
+  };
+};
+
+export async function fetchDashboardKpi_3(
+  token: string,
+): Promise<DashboardKpi3Normalized> {
+  const base = `${import.meta.env.VITE_API_URL}`.replace(/\/+$/, "");
+  const response = await fetch(`${base}/api/v1/kpis/3`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(
+      `Failed to fetch KPIs (${response.status}). ${text ? `Details: ${text}` : ""}`.trim(),
+    );
+  }
+  const json = (await response.json()) as DashboardKpi3Response;
+
+  const data = json.data!;
+  const periodStart = asString(json.period?.start);
+  const periodEnd = asString(json.period?.end);
+
+  const normalized: DashboardKpi3Normalized = {
+    period: { start: periodStart, end: periodEnd },
+    kpi: data,
+  };
+
+  return normalized;
+}
+
+type DashboardKpi4Response = {
+  period?: { start?: string; end?: string };
+  data?: {
+    vehicule_id: number;
+    immatriculation: string;
+    total_km: number;
+    conso_l_100km: number;
+  }[];
+  meta: {
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
+};
+
+export type DashboardKpi4Normalized = {
+  period: {
+    start: string;
+    end: string;
+  };
+  kpi: {
+    vehicule_id: number;
+    immatriculation: string;
+    km_total: number;
+    conso_l_100km: number;
+  }[];
+  meta: {
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
+};
+
+export async function fetchDashboardKpi_4(
+  token: string,
+  params: {
+    page?: number;
+    start?: string;
+    end?: string;
+    per_page?: number;
+  } = {},
+): Promise<DashboardKpi4Normalized> {
+  const base = `${import.meta.env.VITE_API_URL}`.replace(/\/+$/, "");
+
+  const query = new URLSearchParams();
+  if (params.page) query.set("page", String(params.page));
+  if (params.per_page) query.set("per_page", String(params.per_page));
+  if (params.start) query.set("start", params.start);
+  if (params.end) query.set("end", params.end);
+
+  const response = await fetch(`${base}/api/v1/kpis/4?${query.toString()}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(
+      `Failed to fetch KPIs (${response.status}). ${text ? `Details: ${text}` : ""}`.trim(),
+    );
+  }
+  const json = (await response.json()) as DashboardKpi4Response;
+
+  // const data = json.data!;
+  const periodStart = asString(json.period?.start);
+  const periodEnd = asString(json.period?.end);
+
+  const data_normalize = Array.isArray(json.data)
+    ? json.data.map((p: any) => ({
+        vehicule_id: toNumber(p.vehicule_id),
+        immatriculation: asString(p.immatriculation),
+        km_total: toNumber(p.total_km),
+        conso_l_100km: toNumber(p.conso_l_100km),
+      }))
+    : [];
+
+  const meta = json.meta;
+
+  const normalized: DashboardKpi4Normalized = {
+    period: { start: periodStart, end: periodEnd },
+    kpi: data_normalize,
+    meta: meta,
+  };
+
+  return normalized;
+}
+
+type DashboardKpi5Response = {
+  period?: { start?: string; end?: string };
+  summary?: {
+    nb_anomalies: number;
+    nb_pleins: number;
+    pct_pleins_anormaux: number;
+    seuil_ecart_pct: number;
+  };
+  data?: {
+    fuel_log_id: number;
+    vehicule_id: number;
+    date_heure: string;
+    ligne: string;
+    conso_trajet_l: number;
+    conso_attendue_l: number;
+    ecart_pct: number;
+    type: string;
+    immatriculation: string;
+  }[];
+  meta: {
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
+};
+
+export type DashboardKpi5Normalized = {
+  period: {
+    start: string;
+    end: string;
+  };
+  kpi: {
+    fuel_log_id: number;
+    vehicule_id: number;
+    date_heure: string;
+    ligne: string;
+    conso_trajet_l: number;
+    conso_attendue_l: number;
+    ecart_pct: number;
+    type: string;
+    immatriculation: string;
+  }[];
+  meta: {
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
+};
+
+export async function fetchDashboardKpi_5(
+  token: string,
+  params: {
+    page?: number;
+    start?: string;
+    end?: string;
+    per_page?: number;
+  } = {},
+): Promise<DashboardKpi5Normalized> {
+  const base = `${import.meta.env.VITE_API_URL}`.replace(/\/+$/, "");
+  const query = new URLSearchParams();
+  if (params.page) query.set("page", String(params.page));
+  if (params.per_page) query.set("per_page", String(params.per_page));
+  if (params.start) query.set("start", params.start);
+  if (params.end) query.set("end", params.end);
+
+  const response = await fetch(`${base}/api/v1/kpis/5?${query.toString()}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(
+      `Failed to fetch KPIs (${response.status}). ${text ? `Details: ${text}` : ""}`.trim(),
+    );
+  }
+  const json = (await response.json()) as DashboardKpi5Response;
+
+  // const data = json.data!;
+  const periodStart = asString(json.period?.start);
+  const periodEnd = asString(json.period?.end);
+
+  const data_normalize = Array.isArray(json.data)
+    ? json.data.map((p: any) => ({
+        fuel_log_id: p.fuel_log_id,
+        vehicule_id: p.vehicule_id,
+        date_heure: asString(p.date_heure),
+        ligne: p.ligne,
+        conso_trajet_l: p.conso_trajet_l,
+        conso_attendue_l: p.conso_attendue_l,
+        ecart_pct: p.ecart_pct,
+        type: p.type,
+        immatriculation: p.immatriculation,
+      }))
+    : [];
+
+  const meta = json.meta;
+
+  const normalized: DashboardKpi5Normalized = {
+    period: { start: periodStart, end: periodEnd },
+    kpi: data_normalize,
+    meta: meta,
+  };
+
+  return normalized;
+}
+
+type DashboardKpi6Response = {
+  period?: { start?: string; end?: string };
+  data?: {
+    vehicule_id: string;
+    immatriculation: string;
+    nb_pleins: number;
+    nb_voyages: number;
+    source: string;
+  }[];
+  meta: {
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
+};
+
+export type DashboardKpi6Normalized = {
+  period: {
+    start: string;
+    end: string;
+  };
+  kpi: {
+    vehicule_id: string;
+    immatriculation: string;
+    nb_pleins: number;
+    nb_voyages: number;
+    source: string;
+  }[];
+  meta: {
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
+};
+
+export async function fetchDashboardKpi_6(
+  token: string,
+  params: {
+    page?: number;
+    start?: string;
+    end?: string;
+    per_page?: number;
+  } = {},
+): Promise<DashboardKpi6Normalized> {
+  const base = `${import.meta.env.VITE_API_URL}`.replace(/\/+$/, "");
+
+  const query = new URLSearchParams();
+  if (params.page) query.set("page", String(params.page));
+  if (params.per_page) query.set("per_page", String(params.per_page));
+  if (params.start) query.set("start", params.start);
+  if (params.end) query.set("end", params.end);
+
+  const response = await fetch(`${base}/api/v1/kpis/6?${query.toString()}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(
+      `Failed to fetch KPIs (${response.status}). ${text ? `Details: ${text}` : ""}`.trim(),
+    );
+  }
+  const json = (await response.json()) as DashboardKpi6Response;
+
+  // const data = json.data!;
+  const periodStart = asString(json.period?.start);
+  const periodEnd = asString(json.period?.end);
+
+  const data_normalize = Array.isArray(json.data)
+    ? json.data.map((p: any) => ({
+        vehicule_id: asString(p.vehicule_id),
+        immatriculation: asString(p.immatriculation),
+        nb_pleins: toNumber(p.nb_pleins),
+        nb_voyages: toNumber(p.nb_voyages),
+        source: asString(p.source),
+      }))
+    : [];
+
+  const meta = json.meta;
+
+  const normalized: DashboardKpi6Normalized = {
+    period: { start: periodStart, end: periodEnd },
+    kpi: data_normalize,
+    meta: meta,
+  };
+
+  return normalized;
+}
+
+type DashboardKpi7Response = {
+  period?: { start?: string; end?: string };
+  data?: {
+    mode: string;
+    top: {
+      driver_id: number;
+      nom: string;
+      avg_conso_l_100km: number;
+      score: number;
+    }[];
+  };
+};
+
+export type DashboardKpi7Normalized = {
+  period: {
+    start: string;
+    end: string;
+  };
+  kpi: {
+    mode: string;
+    top: {
+      driver_id: number;
+      nom: string;
+      avg_conso_l_100km: number;
+      score: number;
+    }[];
+  };
+};
+
+export async function fetchDashboardKpi_7(
+  token: string,
+  params: {
+    start?: string;
+    end?: string;
+  } = {},
+): Promise<DashboardKpi7Normalized> {
+  const base = `${import.meta.env.VITE_API_URL}`.replace(/\/+$/, "");
+
+  const query = new URLSearchParams();
+
+  if (params.start) query.set("start", params.start);
+  if (params.end) query.set("end", params.end);
+
+  const response = await fetch(`${base}/api/v1/kpis/7?${query.toString()}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(
+      `Failed to fetch KPIs (${response.status}). ${text ? `Details: ${text}` : ""}`.trim(),
+    );
+  }
+  const json = (await response.json()) as DashboardKpi7Response;
+
+  // const data = json.data!;
+
+  const periodStart = asString(json.period?.start);
+  const periodEnd = asString(json.period?.end);
+
+  const data_normalize = json.data!;
+
+  const normalized: DashboardKpi7Normalized = {
+    period: { start: periodStart, end: periodEnd },
+    kpi: data_normalize,
+  };
+
+  return normalized;
+}
+
+type DashboardKpi8Response = {
+  period?: { start?: string; end?: string };
+  data?: {
+    vehicle_id: number;
+    immatriculation: string;
+    vitesse_max_kmh: number;
+    alerte_vitesse: {
+      code_couleur: string;
+      statut: string;
+      action_requise: string;
+      severite: string;
+    };
+  }[];
+  meta: {
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
+};
+
+export type DashboardKpi8Normalized = {
+  period: {
+    start: string;
+    end: string;
+  };
+  kpi: {
+    vehicle_id: number;
+    immatriculation: string;
+    vitesse_max_kmh: number;
+    alerte_vitesse: {
+      code_couleur: string;
+      statut: string;
+      action_requise: string;
+      severite: string;
+    };
+  }[];
+  meta: {
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
+};
+
+export async function fetchDashboardKpi_8(
+  token: string,
+  // page = 1,
+  params: {
+    page?: number;
+    start?: string;
+    end?: string;
+    per_page?: number;
+  } = {},
+): Promise<DashboardKpi8Normalized> {
+  const base = `${import.meta.env.VITE_API_URL}`.replace(/\/+$/, "");
+  const query = new URLSearchParams();
+  if (params.page) query.set("page", String(params.page));
+  if (params.per_page) query.set("per_page", String(params.per_page));
+  if (params.start) query.set("start", params.start);
+  if (params.end) query.set("end", params.end);
+
+  const response = await fetch(`${base}/api/v1/kpis/8?${query.toString()}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(
+      `Failed to fetch KPIs (${response.status}). ${text ? `Details: ${text}` : ""}`.trim(),
+    );
+  }
+  const json = (await response.json()) as DashboardKpi8Response;
+
+  // const data = json.data!;
+  const periodStart = asString(json.period?.start);
+  const periodEnd = asString(json.period?.end);
+
+  const data_normalize = Array.isArray(json.data)
+    ? json.data.map((p: any) => ({
+        vehicle_id: toNumber(p.vehicle_id),
+        immatriculation: p.immatriculation,
+        vitesse_max_kmh: toNumber(p.vitesse_max_kmh),
+        alerte_vitesse: p?.alerte_vitesse,
+      }))
+    : [];
+
+  const meta = json.meta;
+
+  const normalized: DashboardKpi8Normalized = {
+    period: { start: periodStart, end: periodEnd },
+    kpi: data_normalize,
+    meta: meta,
+  };
+
+  return normalized;
+}
+
+// a faire
+
+type DashboardKpi9Response = {
+  period?: { start?: string; end?: string };
+  data?: {
+    ligne_id: number;
+    code_ligne: string;
+    coefficient_charge_bagages: number;
+    conso_brute_l_100km: number;
+    conso_ponderee_l_100km: number;
+  }[];
+  meta: {
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
+};
+
+export type DashboardKpi9Normalized = {
+  period: {
+    start: string;
+    end: string;
+  };
+  kpi: {
+    ligne_id: number;
+    code_ligne: string;
+    coefficient_charge_bagages: number;
+    conso_brute_l_100km: number;
+    conso_ponderee_l_100km: number;
+  }[];
+  meta: {
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
+};
+
+export async function fetchDashboardKpi_9(
+  token: string,
+  params: {
+    page?: number;
+    start?: string;
+    end?: string;
+    per_page?: number;
+  } = {},
+): Promise<DashboardKpi9Normalized> {
+  const base = `${import.meta.env.VITE_API_URL}`.replace(/\/+$/, "");
+  const query = new URLSearchParams();
+  if (params.page) query.set("page", String(params.page));
+  if (params.per_page) query.set("per_page", String(params.per_page));
+  if (params.start) query.set("start", params.start);
+  if (params.end) query.set("end", params.end);
+
+  const response = await fetch(`${base}/api/v1/kpis/9?${query.toString()}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(
+      `Failed to fetch KPIs (${response.status}). ${text ? `Details: ${text}` : ""}`.trim(),
+    );
+  }
+  const json = (await response.json()) as DashboardKpi9Response;
+
+  // const data = json.data!;
+  const periodStart = asString(json.period?.start);
+  const periodEnd = asString(json.period?.end);
+
+  const data_normalize = Array.isArray(json.data)
+    ? json.data.map((p: any) => ({
+        // vehicle_id: toNumber(p.vehicle_id),
+        // immatriculation: p.immatriculation,
+        // vitesse_max_kmh: toNumber(p.vitesse_max_kmh),
+        // alerte_vitesse: p?.alerte_vitesse,
+        ligne_id: p.ligne_id,
+        code_ligne: p.code_ligne,
+        coefficient_charge_bagages: p.coefficient_charge_bagages,
+        conso_brute_l_100km: p.conso_brute_l_100km,
+        conso_ponderee_l_100km: p.conso_ponderee_l_100km,
+      }))
+    : [];
+
+  const meta = json.meta;
+
+  const normalized: DashboardKpi9Normalized = {
+    period: { start: periodStart, end: periodEnd },
+    kpi: data_normalize,
+    meta: meta,
+  };
+
+  return normalized;
+}
+
+type DashboardKpi10Response = {
+  period?: { start?: string; end?: string };
+  data?: {
+    taux_disponibilite_pct: number;
+    nb_actifs: number;
+    nb_total: number;
+    nb_non_actifs: number;
+  };
+};
+
+export type DashboardKpi10Normalized = {
+  period: {
+    start: string;
+    end: string;
+  };
+  kpi: {
+    taux_disponibilite_pct: number;
+    nb_actifs: number;
+    nb_total: number;
+    nb_non_actifs: number;
+  };
+};
+
+export async function fetchDashboardKpi_10(
+  token: string,
+): Promise<DashboardKpi10Normalized> {
+  const base = `${import.meta.env.VITE_API_URL}`.replace(/\/+$/, "");
+  const response = await fetch(`${base}/api/v1/kpis/10`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(
+      `Failed to fetch KPIs (${response.status}). ${text ? `Details: ${text}` : ""}`.trim(),
+    );
+  }
+  const json = (await response.json()) as DashboardKpi10Response;
+
+  // const data = json.data!;
+  const periodStart = asString(json.period?.start);
+  const periodEnd = asString(json.period?.end);
+
+  const data_normalize = json.data!;
+
+  const normalized: DashboardKpi10Normalized = {
+    period: { start: periodStart, end: periodEnd },
+    kpi: data_normalize,
   };
 
   return normalized;

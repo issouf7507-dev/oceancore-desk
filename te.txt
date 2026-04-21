@@ -1,7 +1,7 @@
 import * as React from "react"
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
 import { DashboardLayoutHeader } from "@/layouts/components/DashboardLayoutHeader"
-
+import { useDashboardKpis } from "@/hooks/use-dashboard-kpis"
 import {
   Card,
   CardContent,
@@ -32,9 +32,8 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Loader2, Search, X } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { useKpi1 } from "@/hooks/use-kpi-1"
-import { daysAgo, toISODate } from "@/lib/utils"
 
 const chartConfig = {
   conso_l_100km: {
@@ -43,19 +42,6 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-interface KpiRow {
-  date: string
-  conso_l_100km: number
-  total_litres: number
-  total_km: number
-  nb_voyages: number
-}
-
-interface KpiResponse {
-  kpi: KpiRow[]
-  period?: { start?: string; end?: string }
-}
-
 function formatFr(value: number, min = 2, max = 2) {
   return value.toLocaleString("fr-FR", {
     minimumFractionDigits: min,
@@ -63,46 +49,12 @@ function formatFr(value: number, min = 2, max = 2) {
   })
 }
 
-
-
-
-function useKpi1Range() {
-  const [data, setData] = React.useState<KpiResponse | null>(null)
-  const [loading, setLoading] = React.useState(false)
-  const [error, setError] = React.useState<string | null>(null)
-
-  const fetch_ = React.useCallback(async (start: string, end: string) => {
-    setLoading(true)
-    setError(null)
-    try {
-      const params = new URLSearchParams({ start, end })
-      const res = await fetch(`/api/kpi/1?${params.toString()}`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const json: KpiResponse = await res.json()
-      setData(json)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue")
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  return { data, loading, error, fetch_ }
-}
-
 export default function ConsommationMoyenneFlottePage() {
-  // const { kpi1, loading, error, page, setPage } = useKpi1()
-  const { kpi1, loading, error, page, setPage, dateStart, dateEnd, search, reset } = useKpi1()
+  const { kpi1, loading, error } = useKpi1()
   const rows = kpi1?.kpi ?? []
-  // console.log(kpi1);
-
   const [timeRange, setTimeRange] = React.useState<"90d" | "30d" | "7d">("90d")
   const [query, setQuery] = React.useState("")
   const [sortBy, setSortBy] = React.useState<"date_desc" | "conso_desc" | "conso_asc">("date_desc")
-  const [localStart, setLocalStart] = React.useState(dateStart)
-  const [localEnd, setLocalEnd] = React.useState(dateEnd)
-  const [validationError, setValidationError] = React.useState<string | null>(null)
-
 
   const referenceDate = React.useMemo(() => {
     const raw = kpi1?.period?.end
@@ -143,32 +95,7 @@ export default function ConsommationMoyenneFlottePage() {
   const totalLitres = filteredRows.reduce((sum, r) => sum + r.total_litres, 0)
   const totalKm = filteredRows.reduce((sum, r) => sum + r.total_km, 0)
 
-
-  // -------------------------------------------------------------------------
-  // Soumission du formulaire de dates
-  // -------------------------------------------------------------------------
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault()
-    if (!localStart || !localEnd) {
-      setValidationError("Veuillez renseigner les deux dates.")
-      return
-    }
-    if (localStart > localEnd) {
-      setValidationError("La date de début doit être antérieure à la date de fin.")
-      return
-    }
-    setValidationError(null)
-    search(localStart, localEnd) // ← appelle le hook
-  }
-
-  function handleReset() {
-    reset() // ← appelle le hook
-    setLocalStart(daysAgo(90))
-    setLocalEnd(toISODate(new Date()))
-    setValidationError(null)
-  }
-
-  if (loading) {
+  if (loading && !kpi1) {
     return <div className="p-4 text-sm text-muted-foreground text-center items-center justify-center flex h-screen gap-2">
       <Loader2 className="w-4 h-4 animate-spin" /> Chargement des KPI...</div>
   }
@@ -180,7 +107,6 @@ export default function ConsommationMoyenneFlottePage() {
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
       <DashboardLayoutHeader title="Consommation Moyenne Flotte" breadcrumb="" />
-
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
@@ -258,79 +184,12 @@ export default function ConsommationMoyenneFlottePage() {
 
             <div className="grid gap-1">
               <div className="text-sm text-muted-foreground">Recherche</div>
-              <form
-                onSubmit={handleSearch}
-                className="flex flex-col gap-4 md:flex-row md:items-end"
-              >
-                {/* Date début */}
-                <div className="grid gap-1.5">
-                  <label
-                    htmlFor="date-start"
-                    className="text-sm font-medium text-muted-foreground"
-                  >
-                    Date de début
-                  </label>
-                  <Input
-                    id="date-start"
-                    type="date"
-                    value={localStart}        // ← local
-                    max={localEnd}
-                    onChange={(e) => {
-                      setLocalStart(e.target.value)  // ← local
-                      setValidationError(null)
-                    }}
-                    className="w-full md:w-[200px]"
-                  />
-                </div>
-
-                {/* Séparateur visuel */}
-                <span className="hidden text-muted-foreground md:block md:pb-2">→</span>
-
-                {/* Date fin */}
-                <div className="grid gap-1.5">
-                  <label
-                    htmlFor="date-end"
-                    className="text-sm font-medium text-muted-foreground"
-                  >
-                    Date de fin
-                  </label>
-                  <Input
-                    id="date-end"
-                    type="date"
-                    value={localEnd}          // ← local
-                    min={localStart}
-                    max={toISODate(new Date())}
-                    onChange={(e) => {
-                      setLocalEnd(e.target.value)    // ← local
-                      setValidationError(null)
-                    }}
-                    className="w-full md:w-[200px]"
-                  />
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2 md:pb-0">
-                  <Button type="submit" disabled={loading} className="gap-2">
-                    {loading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Search className="h-4 w-4" />
-                    )}
-                    {loading ? "Chargement…" : "Rechercher"}
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleReset}
-                    disabled={loading}
-                    className="gap-2"
-                  >
-                    <X className="h-4 w-4" />
-                    Réinitialiser
-                  </Button>
-                </div>
-              </form>
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Date (YYYY-MM-DD)..."
+                className="w-full md:w-[260px]"
+              />
             </div>
           </div>
 
@@ -339,7 +198,7 @@ export default function ConsommationMoyenneFlottePage() {
               Résultats:{" "}
               <span className="text-foreground font-medium">{filteredRows.length}</span>
             </div>
-            {/* <Button
+            <Button
               variant="ghost"
               size="sm"
               onClick={() => {
@@ -349,7 +208,7 @@ export default function ConsommationMoyenneFlottePage() {
               }}
             >
               Réinitialiser
-            </Button> */}
+            </Button>
           </div>
 
           <div className="mt-4">
@@ -463,70 +322,6 @@ export default function ConsommationMoyenneFlottePage() {
           </Table>
         </CardContent>
       </Card>
-
-
-      {/* Pagination */}
-      {kpi1?.meta && kpi1.meta.last_page > 1 && (
-        <div className="flex items-center justify-between px-2">
-          <div className="text-sm text-muted-foreground">
-            Page <span className="font-medium text-foreground">{kpi1.meta.current_page}</span>{" "}
-            sur{" "}
-            <span className="font-medium text-foreground">{kpi1.meta.last_page}</span>
-            {" · "}
-            <span className="font-medium text-foreground">{kpi1.meta.total}</span> résultats
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1 || loading}
-            >
-              ← Précédent
-            </Button>
-
-            {/* Pages numérotées */}
-            <div className="flex items-center gap-1">
-              {Array.from({ length: kpi1.meta.last_page }, (_, i) => i + 1)
-                .filter((p) => p === 1 || p === kpi1.meta.last_page || Math.abs(p - page) <= 1)
-                .reduce<(number | "...")[]>((acc, p, idx, arr) => {
-                  if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("...");
-                  acc.push(p);
-                  return acc;
-                }, [])
-                .map((p, idx) =>
-                  p === "..." ? (
-                    <span key={`ellipsis-${idx}`} className="px-1 text-muted-foreground">
-                      …
-                    </span>
-                  ) : (
-                    <Button
-                      key={p}
-                      variant={p === page ? "default" : "outline"}
-                      size="sm"
-                      className="w-8 px-0"
-                      onClick={() => setPage(p as number)}
-                      disabled={loading}
-                    >
-                      {p}
-                    </Button>
-                  )
-                )}
-            </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.min(kpi1.meta.last_page, p + 1))}
-              disabled={page >= kpi1.meta.last_page || loading}
-            >
-              Suivant →
-            </Button>
-          </div>
-        </div>
-      )}
-
     </div>
   )
 }

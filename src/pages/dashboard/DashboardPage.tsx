@@ -35,8 +35,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { useDashboardKpis } from "@/hooks/use-dashboard-kpis"
+// import { useDashboardKpis } from "@/hooks/use-dashboard-kpis"
 import { Button } from "@/components/ui/button"
+import { useDashboardHome } from "@/hooks/use-dashboard-home"
 
 
 
@@ -202,13 +203,15 @@ function KPI5AnomalyTable({
   rows,
 }: {
   rows?: Array<{
-    vehicle_gps: string
-    trip_ref: string
-    date: string
-    km: number
-    conso_l_100km: number
-    vehicle_avg_l_100km: number
-    immatriculation: string
+    fuel_log_id: number;
+    vehicule_id: number;
+    date_heure: string;
+    ligne: string;
+    conso_trajet_l: number;
+    conso_attendue_l: number;
+    ecart_pct: number;
+    type: string;
+    immatriculation: string;
   }>
 }) {
   const data = rows ?? []
@@ -229,7 +232,7 @@ function KPI5AnomalyTable({
               <TableHead>Véhicule (GPS)</TableHead>
               {/* <TableHead>Trajet</TableHead> */}
               <TableHead>Date</TableHead>
-              <TableHead className="text-right">Km</TableHead>
+              {/* <TableHead className="text-right">Km</TableHead> */}
               <TableHead className="text-right">Conso (L/100km)</TableHead>
               <TableHead className="text-right">Moy. véhicule</TableHead>
               <TableHead className="text-right">Écart</TableHead>
@@ -238,19 +241,19 @@ function KPI5AnomalyTable({
           <TableBody>
             {data.length ? (
               data.slice(0, 12).map((t) => {
-                const deviationPct =
-                  t.vehicle_avg_l_100km > 0
-                    ? ((t.conso_l_100km - t.vehicle_avg_l_100km) /
-                      t.vehicle_avg_l_100km) *
-                    100
-                    : 0
+                // const deviationPct =
+                //   t.vehicle_avg_l_100km > 0
+                //     ? ((t.conso_l_100km - t.vehicle_avg_l_100km) /
+                //       t.vehicle_avg_l_100km) *
+                //     100
+                //     : 0
 
                 return (
-                  <TableRow key={t.trip_ref}>
+                  <TableRow key={t.vehicule_id}>
                     <TableCell className="font-medium">{t.immatriculation}</TableCell>
                     {/* <TableCell>{t.trip_ref}s</TableCell> */}
                     <TableCell>
-                      {t.date ? new Date(t.date).toLocaleDateString("fr-FR", {
+                      {t.date_heure ? new Date(t.date_heure).toLocaleDateString("fr-FR", {
                         day: "2-digit",
                         month: "2-digit",
                         year: "numeric",
@@ -262,26 +265,26 @@ function KPI5AnomalyTable({
                         year: "numeric",
                       })} */}
                     </TableCell>
-                    <TableCell className="text-right">
+                    {/* <TableCell className="text-right">
                       {t.km.toLocaleString("fr-FR", {
                         minimumFractionDigits: 1,
                         maximumFractionDigits: 1,
                       })}
-                    </TableCell>
+                    </TableCell> */}
                     <TableCell className="text-right font-medium">
-                      {t.conso_l_100km.toLocaleString("fr-FR", {
+                      {t.conso_trajet_l.toLocaleString("fr-FR", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })}
                     </TableCell>
                     <TableCell className="text-right">
-                      {t.vehicle_avg_l_100km.toLocaleString("fr-FR", {
+                      {t.conso_attendue_l.toLocaleString("fr-FR", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })}
                     </TableCell>
                     <TableCell className="text-right">
-                      {deviationPct.toLocaleString("fr-FR", {
+                      {t.ecart_pct.toLocaleString("fr-FR", {
                         minimumFractionDigits: 1,
                         maximumFractionDigits: 1,
                       })}
@@ -310,7 +313,7 @@ function KPI6RefuelingFrequencyList({
   rows,
 }: {
   rows?: Array<{
-    vehicle_gps: string
+    vehicule_id: string
     immatriculation?: string
     nb_pleins: number
     nb_voyages: number
@@ -336,7 +339,7 @@ function KPI6RefuelingFrequencyList({
           <TableBody>
             {data.length ? (
               data.map((row) => (
-                <TableRow key={row.vehicle_gps}>
+                <TableRow key={row.vehicule_id}>
                   <TableCell className="font-medium">{row.immatriculation}</TableCell>
                   <TableCell className="text-right">
                     {row.nb_pleins.toLocaleString("fr-FR")}
@@ -373,13 +376,21 @@ function KPI6RefuelingFrequencyList({
 function KPI7EcoScoreTop5List({
   rows,
 }: {
-  rows?: Array<{
-    driver: string
-    eco_score: number
-    trips: number
-  }>
+  rows?: {
+    // driver: string
+    // eco_score: number
+    // trips: number
+
+    mode: string;
+    top: {
+      driver_id: number;
+      nom: string;
+      avg_conso_l_100km: number;
+      score: number;
+    }[];
+  }
 }) {
-  const data = rows ?? []
+  const data = rows?.top ?? []
   return (
     <Card>
       <CardHeader>
@@ -399,17 +410,17 @@ function KPI7EcoScoreTop5List({
           <TableBody>
             {data.length ? (
               data.map((row, idx) => (
-                <TableRow key={`${row.driver}-${idx}`}>
+                <TableRow key={`${row.driver_id}-${idx}`}>
                   <TableCell className="font-medium">{idx + 1}</TableCell>
-                  <TableCell className="font-medium">{row.driver}</TableCell>
+                  <TableCell className="font-medium">{row.nom}</TableCell>
                   <TableCell className="text-right font-medium">
-                    {row.eco_score.toLocaleString("fr-FR", {
+                    {row.score.toLocaleString("fr-FR", {
                       minimumFractionDigits: 1,
                       maximumFractionDigits: 1,
                     })}
                   </TableCell>
                   <TableCell className="text-right">
-                    {row.trips.toLocaleString("fr-FR")}
+                    {row.avg_conso_l_100km.toLocaleString("fr-FR")}
                   </TableCell>
                 </TableRow>
               ))
@@ -444,8 +455,19 @@ function KPI8MaxSpeedBarLabel({
   rows,
 }: {
   rows?: Array<{
-    vehicle: string
-    vmax_kmh: number
+    // vehicle: string
+    // vmax_kmh: number
+
+    vehicle_id: number;
+    immatriculation: string;
+    vitesse_max_kmh: number;
+    alerte_vitesse: {
+      code_couleur: string;
+      statut: string;
+      action_requise: string;
+      severite: string;
+    }
+
   }>
 }) {
   const data = rows ?? []
@@ -464,7 +486,7 @@ function KPI8MaxSpeedBarLabel({
           >
             <CartesianGrid vertical={false} />
             <XAxis
-              dataKey="vehicle"
+              dataKey="immatriculation"
               tickLine={false}
               tickMargin={10}
               axisLine={false}
@@ -496,7 +518,7 @@ function KPI8MaxSpeedBarLabel({
                 />
               }
             />
-            <Bar dataKey="vmax_kmh" fill="var(--color-vmax_kmh)" radius={8}>
+            <Bar dataKey="vitesse_max_kmh" fill="var(--color-vmax_kmh)" radius={8}>
               <LabelList
                 position="top"
                 offset={12}
@@ -528,9 +550,14 @@ function KPI9WeightedConsumptionByLineList({
   rows,
 }: {
   rows?: Array<{
-    line: string
-    luggage_coeff: number
-    weighted_conso_l_100km: number
+    ligne_id: number;
+    code_ligne: string;
+    coefficient_charge_bagages: number;
+    conso_brute_l_100km: number;
+    conso_ponderee_l_100km: number;
+    // line: string
+    // luggage_coeff: number
+    // weighted_conso_l_100km: number
   }>
 }) {
   const data = rows ?? []
@@ -552,16 +579,16 @@ function KPI9WeightedConsumptionByLineList({
           <TableBody>
             {data.length ? (
               data.map((row) => (
-                <TableRow key={row.line}>
-                  <TableCell className="font-medium">{row.line}</TableCell>
+                <TableRow key={row.ligne_id}>
+                  <TableCell className="font-medium">{row.code_ligne}</TableCell>
                   <TableCell className="text-right">
-                    {row.luggage_coeff.toLocaleString("fr-FR", {
+                    {row.coefficient_charge_bagages.toLocaleString("fr-FR", {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}
                   </TableCell>
                   <TableCell className="text-right font-medium">
-                    {row.weighted_conso_l_100km.toLocaleString("fr-FR", {
+                    {row.conso_ponderee_l_100km.toLocaleString("fr-FR", {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}
@@ -708,14 +735,14 @@ function ChartBarLabel({
   rows,
 }: {
   rows?: Array<{
-    vehicle_gps: string
+    // vehicle_gps: string
     conso_l_100km: number
     km_total: number
     immatriculation: string
   }>
 }) {
   const data = rows ?? []
-  console.log(data)
+  // console.log(data)
   return (
     <Card>
       <CardHeader>
@@ -815,24 +842,29 @@ function ChartBarLabel({
 
 
 export function DashboardPage() {
-  const { kpis, loading, error } = useDashboardKpis()
 
-  // console.log(kpis)
+  const { loading, errors, kpi1, kpi2, kpi3, kpi4, kpi5, kpi6, kpi7, kpi8, kpi9, kpi10 } = useDashboardHome()
+  // console.log("ada", ada)
+  console.log("kpi4", kpi4)
 
-  if (loading && !kpis) {
+  if (loading) {
     return <div className="p-4 text-sm text-muted-foreground text-center items-center justify-center flex h-screen gap-2">
       <Loader2 className="w-4 h-4 animate-spin" /> Chargement des KPI...</div>
   }
 
-  if (error) {
-    return <div className="p-4 text-sm text-red-500 text-center items-center justify-center flex h-screen">Erreur: {error}</div>
-  }
+
 
   return (
     <>
       <DashboardLayoutHeader title="Dashboard" breadcrumb="" />
 
-
+      {/* Bandeau si certains KPIs ont échoué */}
+      {Object.keys(errors).length > 0 && (
+        <div className="mx-4 mb-2 rounded-md bg-red-50 px-4 py-2 text-sm text-red-600">
+          Certains indicateurs n'ont pas pu être chargés :{" "}
+          {Object.keys(errors).join(", ")}
+        </div>
+      )}
 
       <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
         <div className="grid auto-rows-min gap-4 md:grid-cols-3 ">
@@ -840,7 +872,7 @@ export function DashboardPage() {
           <ChartRadialShape
             title="Volume total consommé (période)"
             description="Somme des consommations calculées"
-            value={kpis?.kpi2_volume_total_litres ?? 0}
+            value={kpi2?.kpi.total_litres ?? 0}
             valueLabel="L"
             trend="—"
             trendDescription="Somme des consommations calculées (consommation_calculee_l)"
@@ -857,9 +889,10 @@ export function DashboardPage() {
           <ChartRadialShape
             title="Taux de disponibilité de la flotte"
             description="Basé sur le référentiel véhicules"
-            value={kpis?.kpi10_taux_disponibilite_flotte.taux_disponibilite_pct ?? 0}
+            // value={kpis?.kpi10_taux_disponibilite_flotte.taux_disponibilite_pct ?? 0}
+            value={kpi10?.kpi?.taux_disponibilite_pct ?? 0}
             valueLabel="%"
-            trend={`${kpis?.kpi10_taux_disponibilite_flotte.nb_actifs ?? 0} / ${kpis?.kpi10_taux_disponibilite_flotte.nb_total ?? 0
+            trend={`${kpi10?.kpi.nb_actifs ?? 0} / ${kpi10?.kpi.nb_total ?? 0
               } véhicules actifs`}
             trendDescription="Disponibilité sur la période"
             color="#535c68"
@@ -875,7 +908,7 @@ export function DashboardPage() {
           <ChartRadialShape
             title="Coût carburant"
             description="Montant estimé des ravitaillements"
-            value={kpis?.kpi3_cout_carburant_fcfa ?? 0}
+            value={kpi3?.kpi.total_fcfa ?? 0}
             valueLabel="FCFA"
             trend="—"
             trendDescription="Montant estimé des ravitaillements"
@@ -891,36 +924,28 @@ export function DashboardPage() {
 
         <div className="">
           <ChartAreaInteractive
-            series={kpis?.kpi1_series_journaliere}
-            periodEnd={kpis?.period.end}
+            series={kpi1?.kpi}
+            periodEnd={kpi1?.period.end}
           />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           {/* <ChartBarMultiple /> */}
           <ChartBarLabel
-            rows={kpis?.kpi4_ecart_kilometrage_excel_vs_gps ?? []}
+            rows={kpi4?.kpi ?? []}
           />
-          <KPI5AnomalyTable rows={kpis?.kpi5_indice_anomalie_trips.map((item) => ({
-            vehicle_gps: item.vehicule_id,
-            trip_ref: item.refueling_id,
-            date: item.date_heure,
-            km: item.conso_trajet_l,
-            conso_l_100km: item.conso_trajet_l,
-            vehicle_avg_l_100km: item.conso_attendue_l,
-            immatriculation: item.immatriculation,
-          }))} />
+          <KPI5AnomalyTable rows={kpi5?.kpi} />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
 
           <KPI6RefuelingFrequencyList
-            rows={kpis?.kpi6_frequence_ravitaillement_par_vehicule ?? []}
+            rows={kpi6?.kpi ?? []}
           />
-          <KPI7EcoScoreTop5List rows={kpis?.kpi7_eco_score_chauffeur_top ?? []} />
-          <KPI8MaxSpeedBarLabel rows={kpis?.kpi8_vitesse_max_par_vehicule ?? []} />
+          <KPI7EcoScoreTop5List rows={kpi7?.kpi} />
+          <KPI8MaxSpeedBarLabel rows={kpi8?.kpi ?? []} />
           <KPI9WeightedConsumptionByLineList
-            rows={kpis?.kpi9_conso_ponderee_par_ligne ?? []}
+            rows={kpi9?.kpi ?? []}
           />
         </div>
       </div>

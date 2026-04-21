@@ -1,6 +1,6 @@
 import * as React from "react"
 import { DashboardLayoutHeader } from "@/layouts/components/DashboardLayoutHeader"
-import { useDashboardKpis } from "@/hooks/use-dashboard-kpis"
+
 import {
     Card,
     CardContent,
@@ -25,7 +25,9 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { Loader2 } from "lucide-react"
+import { Loader2, Search, X } from "lucide-react"
+import { useKpi5 } from "@/hooks/use-kpi-5"
+import { daysAgo, toISODate } from "@/lib/utils"
 
 function formatFrNumber(
     value: number,
@@ -38,16 +40,22 @@ function formatFrNumber(
 }
 
 export default function TrajetsAnormauxPage() {
-    const { kpis, loading, error } = useDashboardKpis()
-    const rows = kpis?.kpi5_indice_anomalie_trips ?? []
+    // const { kpi5, loading, error, page, setPage } = useKpi5()
+    const { kpi5, loading, error, page, setPage, dateStart, dateEnd, search, reset } = useKpi5()
+    const rows = kpi5?.kpi ?? []
     const [timeRange, setTimeRange] = React.useState<"90d" | "30d" | "7d">("90d")
     const [direction, setDirection] = React.useState<"all" | "over" | "under">("all")
     const [query, setQuery] = React.useState("")
+    const [localStart, setLocalStart] = React.useState(dateStart)
+    const [localEnd, setLocalEnd] = React.useState(dateEnd)
+    const [validationError, setValidationError] = React.useState<string | null>(null)
+    // console.log(kpi5);
+
 
     // console.log(rows)
 
     const referenceDate = React.useMemo(() => {
-        const raw = kpis?.period?.end
+        const raw = kpi5?.period?.end
         const parsed = raw ? new Date(raw) : undefined
         if (parsed && !Number.isNaN(parsed.getTime())) return parsed
 
@@ -57,7 +65,7 @@ export default function TrajetsAnormauxPage() {
 
         const max = timestamps.length ? Math.max(...timestamps) : undefined
         return max ? new Date(max) : new Date()
-    }, [kpis?.period?.end, rows])
+    }, [kpi5?.period?.end, rows])
 
     const filteredRows = React.useMemo(() => {
         let daysToSubtract = 90
@@ -78,8 +86,8 @@ export default function TrajetsAnormauxPage() {
             .filter((t) => {
                 if (!q) return true
                 return (
-                    t.vehicule_id.toLowerCase().includes(q) ||
-                    (t.refueling_id ?? "").toLowerCase().includes(q)
+                    t.vehicule_id.toString().toLowerCase().includes(q)
+                    // (t.refueling_id ?? "").toLowerCase().includes(q)
                 )
             })
             .filter((t) => {
@@ -93,7 +101,32 @@ export default function TrajetsAnormauxPage() {
             })
     }, [direction, query, referenceDate, rows, timeRange])
 
-    if (loading && !kpis) {
+
+    // -------------------------------------------------------------------------
+    // Soumission du formulaire de dates
+    // -------------------------------------------------------------------------
+    function handleSearch(e: React.FormEvent) {
+        e.preventDefault()
+        if (!localStart || !localEnd) {
+            setValidationError("Veuillez renseigner les deux dates.")
+            return
+        }
+        if (localStart > localEnd) {
+            setValidationError("La date de début doit être antérieure à la date de fin.")
+            return
+        }
+        setValidationError(null)
+        search(localStart, localEnd) // ← appelle le hook
+    }
+
+    function handleReset() {
+        reset() // ← appelle le hook
+        setLocalStart(daysAgo(90))
+        setLocalEnd(toISODate(new Date()))
+        setValidationError(null)
+    }
+
+    if (loading) {
         return (
             <div className="p-4 text-sm text-muted-foreground text-center items-center justify-center flex h-screen gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" /> Chargement des KPI...</div>
@@ -166,18 +199,79 @@ export default function TrajetsAnormauxPage() {
                         <div className="text-sm text-muted-foreground">
                             Résultats: <span className="text-foreground font-medium">{filteredRows.length}</span>
                         </div>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                                setQuery("")
-                                setDirection("all")
-                                setTimeRange("90d")
-                            }}
-                            className="self-end"
+                        <form
+                            onSubmit={handleSearch}
+                            className="flex flex-col gap-4 md:flex-row md:items-end"
                         >
-                            Réinitialiser
-                        </Button>
+                            {/* Date début */}
+                            <div className="grid gap-1.5">
+                                <label
+                                    htmlFor="date-start"
+                                    className="text-sm font-medium text-muted-foreground"
+                                >
+                                    Date de début
+                                </label>
+                                <Input
+                                    id="date-start"
+                                    type="date"
+                                    value={localStart}        // ← local
+                                    max={localEnd}
+                                    onChange={(e) => {
+                                        setLocalStart(e.target.value)  // ← local
+                                        setValidationError(null)
+                                    }}
+                                    className="w-full md:w-[200px]"
+                                />
+                            </div>
+
+                            {/* Séparateur visuel */}
+                            <span className="hidden text-muted-foreground md:block md:pb-2">→</span>
+
+                            {/* Date fin */}
+                            <div className="grid gap-1.5">
+                                <label
+                                    htmlFor="date-end"
+                                    className="text-sm font-medium text-muted-foreground"
+                                >
+                                    Date de fin
+                                </label>
+                                <Input
+                                    id="date-end"
+                                    type="date"
+                                    value={localEnd}          // ← local
+                                    min={localStart}
+                                    max={toISODate(new Date())}
+                                    onChange={(e) => {
+                                        setLocalEnd(e.target.value)    // ← local
+                                        setValidationError(null)
+                                    }}
+                                    className="w-full md:w-[200px]"
+                                />
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex gap-2 md:pb-0">
+                                <Button type="submit" disabled={loading} className="gap-2">
+                                    {loading ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <Search className="h-4 w-4" />
+                                    )}
+                                    {loading ? "Chargement…" : "Rechercher"}
+                                </Button>
+
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={handleReset}
+                                    disabled={loading}
+                                    className="gap-2"
+                                >
+                                    <X className="h-4 w-4" />
+                                    Réinitialiser
+                                </Button>
+                            </div>
+                        </form>
                     </div>
 
                     <Table>
@@ -186,7 +280,7 @@ export default function TrajetsAnormauxPage() {
                                 <TableHead>Véhicule (GPS)</TableHead>
                                 {/* <TableHead>Trajet</TableHead> */}
                                 <TableHead>Date</TableHead>
-                                <TableHead className="text-right">Km</TableHead>
+                                {/* <TableHead className="text-right">Km</TableHead> */}
                                 <TableHead className="text-right">
                                     Conso (L/100km)
                                 </TableHead>
@@ -198,7 +292,7 @@ export default function TrajetsAnormauxPage() {
                         </TableHeader>
                         <TableBody>
                             {filteredRows.length ? (
-                                filteredRows.map((t) => {
+                                filteredRows.map((t, index) => {
                                     const deviationPct =
                                         t.conso_attendue_l > 0
                                             ? ((t.conso_trajet_l - t.conso_attendue_l) /
@@ -207,7 +301,7 @@ export default function TrajetsAnormauxPage() {
                                             : 0
 
                                     return (
-                                        <TableRow key={t.refueling_id}>
+                                        <TableRow key={`${t.vehicule_id}-${index}`}>
                                             <TableCell className="font-medium">
                                                 {t.immatriculation}
                                             </TableCell>
@@ -217,12 +311,12 @@ export default function TrajetsAnormauxPage() {
                                                     ? new Date(t.date_heure).toLocaleDateString("fr-FR")
                                                     : "—"}
                                             </TableCell>
-                                            <TableCell className="text-right">
+                                            {/* <TableCell className="text-right">
                                                 {formatFrNumber(t.conso_trajet_l, {
                                                     minFractionDigits: 1,
                                                     maxFractionDigits: 1,
                                                 })}
-                                            </TableCell>
+                                            </TableCell> */}
                                             <TableCell className="text-right font-medium">
                                                 {formatFrNumber(t.conso_trajet_l, {
                                                     minFractionDigits: 2,
@@ -259,6 +353,68 @@ export default function TrajetsAnormauxPage() {
                     </Table>
                 </CardContent>
             </Card>
+
+            {/* Pagination */}
+            {kpi5?.meta && kpi5.meta.last_page > 1 && (
+                <div className="flex items-center justify-between px-2">
+                    <div className="text-sm text-muted-foreground">
+                        Page <span className="font-medium text-foreground">{kpi5.meta.current_page}</span>{" "}
+                        sur{" "}
+                        <span className="font-medium text-foreground">{kpi5.meta.last_page}</span>
+                        {" · "}
+                        <span className="font-medium text-foreground">{kpi5.meta.total}</span> résultats
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPage((p) => Math.max(1, p - 1))}
+                            disabled={page <= 1 || loading}
+                        >
+                            ← Précédent
+                        </Button>
+
+                        {/* Pages numérotées */}
+                        <div className="flex items-center gap-1">
+                            {Array.from({ length: kpi5.meta.last_page }, (_, i) => i + 1)
+                                .filter((p) => p === 1 || p === kpi5.meta.last_page || Math.abs(p - page) <= 1)
+                                .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+                                    if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("...");
+                                    acc.push(p);
+                                    return acc;
+                                }, [])
+                                .map((p, idx) =>
+                                    p === "..." ? (
+                                        <span key={`ellipsis-${idx}`} className="px-1 text-muted-foreground">
+                                            …
+                                        </span>
+                                    ) : (
+                                        <Button
+                                            key={p}
+                                            variant={p === page ? "default" : "outline"}
+                                            size="sm"
+                                            className="w-8 px-0"
+                                            onClick={() => setPage(p as number)}
+                                            disabled={loading}
+                                        >
+                                            {p}
+                                        </Button>
+                                    )
+                                )}
+                        </div>
+
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPage((p) => Math.min(kpi5.meta.last_page, p + 1))}
+                            disabled={page >= kpi5.meta.last_page || loading}
+                        >
+                            Suivant →
+                        </Button>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

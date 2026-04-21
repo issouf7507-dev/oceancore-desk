@@ -1,6 +1,6 @@
 import * as React from "react"
 import { DashboardLayoutHeader } from "@/layouts/components/DashboardLayoutHeader"
-import { useDashboardKpis } from "@/hooks/use-dashboard-kpis"
+
 import {
   Card,
   CardContent,
@@ -25,24 +25,34 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { Loader2 } from "lucide-react"
+import { Loader2, Search, X } from "lucide-react"
+import { useKpi6 } from "@/hooks/use-kpi-6"
+import { daysAgo, toISODate } from "@/lib/utils"
 
 type Row = {
-  vehicle_gps: string
-  immatriculation: string
-  nb_pleins: number
-  nb_voyages: number
-  source: string
+  vehicule_id: string;
+  immatriculation: string;
+  nb_pleins: number;
+  nb_voyages: number;
+  source: string;
 }
 
 export default function FrequenceRavitaillementsPage() {
-  const { kpis, loading, error } = useDashboardKpis()
-  const rows = (kpis?.kpi6_frequence_ravitaillement_par_vehicule ?? []) as Row[]
+  const { kpi6, loading, error, page, setPage, dateStart, dateEnd, search, reset } = useKpi6()
+  const rows = (kpi6?.kpi ?? []) as Row[]
+
+  // console.log(kpi6);
+
 
   const [query, setQuery] = React.useState("")
   const [minPleins, setMinPleins] = React.useState(0)
   const [minVoyages, setMinVoyages] = React.useState(0)
   const [sortBy, setSortBy] = React.useState<"pleins_desc" | "voyages_desc" | "vehicle_asc">("pleins_desc")
+  const [localStart, setLocalStart] = React.useState(dateStart)
+  const [localEnd, setLocalEnd] = React.useState(dateEnd)
+  const [validationError, setValidationError] = React.useState<string | null>(null)
+
+
 
   const filteredRows = React.useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -51,13 +61,13 @@ export default function FrequenceRavitaillementsPage() {
       .filter((r) => {
         if (!q) return true
         return (
-          r.vehicle_gps.toLowerCase().includes(q) ||
+          r.vehicule_id.toString().toLowerCase().includes(q) ||
           (r.immatriculation ?? "").toLowerCase().includes(q)
         )
       })
 
     if (sortBy === "vehicle_asc") {
-      return [...list].sort((a, b) => a.vehicle_gps.localeCompare(b.vehicle_gps))
+      return [...list].sort((a, b) => a.vehicule_id.localeCompare(b.vehicule_id))
     }
     if (sortBy === "voyages_desc") {
       return [...list].sort((a, b) => b.nb_voyages - a.nb_voyages)
@@ -65,12 +75,38 @@ export default function FrequenceRavitaillementsPage() {
     return [...list].sort((a, b) => b.nb_pleins - a.nb_pleins)
   }, [minPleins, minVoyages, query, rows, sortBy])
 
-  if (loading && !kpis) {
+  if (loading) {
     return <div className="p-4 text-sm text-muted-foreground text-center items-center justify-center flex h-screen gap-2">
       <Loader2 className="w-4 h-4 animate-spin" /> Chargement des KPI...</div>
   }
   if (error) {
     return <div className="p-4 text-sm text-red-500">Erreur: {error}</div>
+  }
+
+
+
+  // -------------------------------------------------------------------------
+  // Soumission du formulaire de dates
+  // -------------------------------------------------------------------------
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault()
+    if (!localStart || !localEnd) {
+      setValidationError("Veuillez renseigner les deux dates.")
+      return
+    }
+    if (localStart > localEnd) {
+      setValidationError("La date de début doit être antérieure à la date de fin.")
+      return
+    }
+    setValidationError(null)
+    search(localStart, localEnd) // ← appelle le hook
+  }
+
+  function handleReset() {
+    reset() // ← appelle le hook
+    setLocalStart(daysAgo(90))
+    setLocalEnd(toISODate(new Date()))
+    setValidationError(null)
   }
 
   return (
@@ -146,12 +182,79 @@ export default function FrequenceRavitaillementsPage() {
 
             <div className="grid gap-1">
               <div className="text-sm text-muted-foreground">Recherche</div>
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="GPS ou immatriculation..."
-                className="w-full md:w-[320px]"
-              />
+              <form
+                onSubmit={handleSearch}
+                className="flex flex-col gap-4 md:flex-row md:items-end"
+              >
+                {/* Date début */}
+                <div className="grid gap-1.5">
+                  <label
+                    htmlFor="date-start"
+                    className="text-sm font-medium text-muted-foreground"
+                  >
+                    Date de début
+                  </label>
+                  <Input
+                    id="date-start"
+                    type="date"
+                    value={localStart}        // ← local
+                    max={localEnd}
+                    onChange={(e) => {
+                      setLocalStart(e.target.value)  // ← local
+                      setValidationError(null)
+                    }}
+                    className="w-full md:w-[200px]"
+                  />
+                </div>
+
+                {/* Séparateur visuel */}
+                <span className="hidden text-muted-foreground md:block md:pb-2">→</span>
+
+                {/* Date fin */}
+                <div className="grid gap-1.5">
+                  <label
+                    htmlFor="date-end"
+                    className="text-sm font-medium text-muted-foreground"
+                  >
+                    Date de fin
+                  </label>
+                  <Input
+                    id="date-end"
+                    type="date"
+                    value={localEnd}          // ← local
+                    min={localStart}
+                    max={toISODate(new Date())}
+                    onChange={(e) => {
+                      setLocalEnd(e.target.value)    // ← local
+                      setValidationError(null)
+                    }}
+                    className="w-full md:w-[200px]"
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 md:pb-0">
+                  <Button type="submit" disabled={loading} className="gap-2">
+                    {loading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                    {loading ? "Chargement…" : "Rechercher"}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleReset}
+                    disabled={loading}
+                    className="gap-2"
+                  >
+                    <X className="h-4 w-4" />
+                    Réinitialiser
+                  </Button>
+                </div>
+              </form>
             </div>
           </div>
 
@@ -188,7 +291,7 @@ export default function FrequenceRavitaillementsPage() {
             <TableBody>
               {filteredRows.length ? (
                 filteredRows.map((row) => (
-                  <TableRow key={`${row.vehicle_gps}-${row.source}`}>
+                  <TableRow key={`${row.vehicule_id}-${row.source}`}>
                     <TableCell className="font-medium">{row.immatriculation}</TableCell>
                     <TableCell>{row.immatriculation || "—"}</TableCell>
                     <TableCell className="text-right">
@@ -210,6 +313,69 @@ export default function FrequenceRavitaillementsPage() {
           </Table>
         </CardContent>
       </Card>
+
+
+      {/* Pagination */}
+      {kpi6?.meta && kpi6.meta.last_page > 1 && (
+        <div className="flex items-center justify-between px-2">
+          <div className="text-sm text-muted-foreground">
+            Page <span className="font-medium text-foreground">{kpi6.meta.current_page}</span>{" "}
+            sur{" "}
+            <span className="font-medium text-foreground">{kpi6.meta.last_page}</span>
+            {" · "}
+            <span className="font-medium text-foreground">{kpi6.meta.total}</span> résultats
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1 || loading}
+            >
+              ← Précédent
+            </Button>
+
+            {/* Pages numérotées */}
+            <div className="flex items-center gap-1">
+              {Array.from({ length: kpi6.meta.last_page }, (_, i) => i + 1)
+                .filter((p) => p === 1 || p === kpi6.meta.last_page || Math.abs(p - page) <= 1)
+                .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+                  if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("...");
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((p, idx) =>
+                  p === "..." ? (
+                    <span key={`ellipsis-${idx}`} className="px-1 text-muted-foreground">
+                      …
+                    </span>
+                  ) : (
+                    <Button
+                      key={p}
+                      variant={p === page ? "default" : "outline"}
+                      size="sm"
+                      className="w-8 px-0"
+                      onClick={() => setPage(p as number)}
+                      disabled={loading}
+                    >
+                      {p}
+                    </Button>
+                  )
+                )}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(kpi6.meta.last_page, p + 1))}
+              disabled={page >= kpi6.meta.last_page || loading}
+            >
+              Suivant →
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

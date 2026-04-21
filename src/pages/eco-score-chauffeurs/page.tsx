@@ -1,6 +1,6 @@
 import * as React from "react"
 import { DashboardLayoutHeader } from "@/layouts/components/DashboardLayoutHeader"
-import { useDashboardKpis } from "@/hooks/use-dashboard-kpis"
+
 import {
   Card,
   CardContent,
@@ -25,12 +25,21 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { Loader2 } from "lucide-react"
+import { Loader2, Search, X } from "lucide-react"
+import { useKpi7 } from "@/hooks/use-kpi-7"
+import { daysAgo, toISODate } from "@/lib/utils"
 
 type Row = {
-  driver: string
-  eco_score: number
-  trips: number
+  // driver: string
+  // eco_score: number
+  // trips: number
+  mode: string;
+  top: {
+    driver_id: number;
+    nom: string;
+    avg_conso_l_100km: number;
+    score: number;
+  }[];
 }
 
 function formatFr(value: number, min = 1, max = 1) {
@@ -41,43 +50,69 @@ function formatFr(value: number, min = 1, max = 1) {
 }
 
 export default function EcoScoreChauffeursPage() {
-  const { kpis, loading, error } = useDashboardKpis()
-  const rows = (kpis?.kpi7_eco_score_chauffeur_top ?? []) as Row[]
+  const { kpi7, loading, error, reset, dateEnd, dateStart, search } = useKpi7()
+  const rows = (kpi7?.kpi) as Row
 
   const [query, setQuery] = React.useState("")
   const [minScore, setMinScore] = React.useState(0)
-  const [minTrips, setMinTrips] = React.useState(0)
+
   const [sortBy, setSortBy] = React.useState<"score_desc" | "trips_desc" | "driver_asc">("score_desc")
+  const [localStart, setLocalStart] = React.useState(dateStart)
+  const [localEnd, setLocalEnd] = React.useState(dateEnd)
+  const [validationError, setValidationError] = React.useState<string | null>(null)
 
   const filteredRows = React.useMemo(() => {
+    const top = rows?.top ?? [] // ✅ fallback
     const q = query.trim().toLowerCase()
 
-    const base = rows
-      .filter((r) => r.eco_score >= minScore && r.trips >= minTrips)
-      .filter((r) => (!q ? true : r.driver.toLowerCase().includes(q)))
+    const base = top
+      .filter((r) => r.score >= minScore)
+      .filter((r) => (!q ? true : r.nom.toLowerCase().includes(q)))
 
     if (sortBy === "driver_asc") {
-      return [...base].sort((a, b) => a.driver.localeCompare(b.driver))
+      return [...base].sort((a, b) => a.nom.localeCompare(b.nom))
     }
-    if (sortBy === "trips_desc") {
-      return [...base].sort((a, b) => b.trips - a.trips)
-    }
-    return [...base].sort((a, b) => b.eco_score - a.eco_score)
-  }, [minScore, minTrips, query, rows, sortBy])
+    return [...base].sort((a, b) => b.score - a.score)
+  }, [minScore, query, rows, sortBy])
+
 
   const avgScore =
     filteredRows.length > 0
-      ? filteredRows.reduce((sum, r) => sum + r.eco_score, 0) / filteredRows.length
+      ? filteredRows.reduce((sum, r) => sum + r.score, 0) / filteredRows.length
       : 0
-  const totalTrips = filteredRows.reduce((sum, r) => sum + r.trips, 0)
+  // const totalTrips = filteredRows.reduce((sum, r) => sum + r.trips, 0)
 
-  if (loading && !kpis) {
+  if (loading) {
     return <div className="p-4 text-sm text-muted-foreground text-center items-center justify-center flex h-screen gap-2">
       <Loader2 className="w-4 h-4 animate-spin" /> Chargement des KPI...</div>
   }
 
   if (error) {
     return <div className="p-4 text-sm text-red-500">Erreur: {error}</div>
+  }
+
+  // -------------------------------------------------------------------------
+  // Soumission du formulaire de dates
+  // -------------------------------------------------------------------------
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault()
+    if (!localStart || !localEnd) {
+      setValidationError("Veuillez renseigner les deux dates.")
+      return
+    }
+    if (localStart > localEnd) {
+      setValidationError("La date de début doit être antérieure à la date de fin.")
+      return
+    }
+    setValidationError(null)
+    search(localStart, localEnd) // ← appelle le hook
+  }
+
+  function handleReset() {
+    reset() // ← appelle le hook
+    setLocalStart(daysAgo(90))
+    setLocalEnd(toISODate(new Date()))
+    setValidationError(null)
   }
 
   return (
@@ -101,14 +136,14 @@ export default function EcoScoreChauffeursPage() {
             <div className="text-3xl font-bold">{formatFr(avgScore, 1, 1)}</div>
           </CardContent>
         </Card>
-        <Card>
+        {/* <Card>
           <CardHeader>
             <CardTitle>Nb trajets</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{totalTrips.toLocaleString("fr-FR")}</div>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
 
       <Card>
@@ -138,23 +173,7 @@ export default function EcoScoreChauffeursPage() {
                 </Select>
               </div>
 
-              <div className="grid gap-1">
-                <div className="text-sm text-muted-foreground">Nb trajets minimum</div>
-                <Select
-                  value={String(minTrips)}
-                  onValueChange={(v) => setMinTrips(Number(v))}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0">0+</SelectItem>
-                    <SelectItem value="1">1+</SelectItem>
-                    <SelectItem value="5">5+</SelectItem>
-                    <SelectItem value="10">10+</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+
 
               <div className="grid gap-1">
                 <div className="text-sm text-muted-foreground">Tri</div>
@@ -178,12 +197,79 @@ export default function EcoScoreChauffeursPage() {
 
             <div className="grid gap-1">
               <div className="text-sm text-muted-foreground">Recherche</div>
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Nom chauffeur..."
-                className="w-full md:w-[320px]"
-              />
+              <form
+                onSubmit={handleSearch}
+                className="flex flex-col gap-4 md:flex-row md:items-end"
+              >
+                {/* Date début */}
+                <div className="grid gap-1.5">
+                  <label
+                    htmlFor="date-start"
+                    className="text-sm font-medium text-muted-foreground"
+                  >
+                    Date de début
+                  </label>
+                  <Input
+                    id="date-start"
+                    type="date"
+                    value={localStart}        // ← local
+                    max={localEnd}
+                    onChange={(e) => {
+                      setLocalStart(e.target.value)  // ← local
+                      setValidationError(null)
+                    }}
+                    className="w-full md:w-[200px]"
+                  />
+                </div>
+
+                {/* Séparateur visuel */}
+                <span className="hidden text-muted-foreground md:block md:pb-2">→</span>
+
+                {/* Date fin */}
+                <div className="grid gap-1.5">
+                  <label
+                    htmlFor="date-end"
+                    className="text-sm font-medium text-muted-foreground"
+                  >
+                    Date de fin
+                  </label>
+                  <Input
+                    id="date-end"
+                    type="date"
+                    value={localEnd}          // ← local
+                    min={localStart}
+                    max={toISODate(new Date())}
+                    onChange={(e) => {
+                      setLocalEnd(e.target.value)    // ← local
+                      setValidationError(null)
+                    }}
+                    className="w-full md:w-[200px]"
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 md:pb-0">
+                  <Button type="submit" disabled={loading} className="gap-2">
+                    {loading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                    {loading ? "Chargement…" : "Rechercher"}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleReset}
+                    disabled={loading}
+                    className="gap-2"
+                  >
+                    <X className="h-4 w-4" />
+                    Réinitialiser
+                  </Button>
+                </div>
+              </form>
             </div>
           </div>
 
@@ -200,7 +286,7 @@ export default function EcoScoreChauffeursPage() {
               onClick={() => {
                 setQuery("")
                 setMinScore(0)
-                setMinTrips(0)
+
                 setSortBy("score_desc")
               }}
             >
@@ -214,20 +300,20 @@ export default function EcoScoreChauffeursPage() {
                 <TableHead className="w-[64px]">#</TableHead>
                 <TableHead>Chauffeur</TableHead>
                 <TableHead className="text-right">Eco-score</TableHead>
-                <TableHead className="text-right">Nb trajets</TableHead>
+                <TableHead className="text-right">Vitesse max</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredRows.length ? (
                 filteredRows.map((row, idx) => (
-                  <TableRow key={`${row.driver}-${idx}`}>
+                  <TableRow key={`${row.driver_id}-${idx}`}>
                     <TableCell className="font-medium">{idx + 1}</TableCell>
-                    <TableCell className="font-medium">{row.driver}</TableCell>
+                    <TableCell className="font-medium">{row.nom}</TableCell>
                     <TableCell className="text-right font-medium">
-                      {formatFr(row.eco_score, 1, 1)}
+                      {formatFr(row.score, 1, 1)}
                     </TableCell>
                     <TableCell className="text-right">
-                      {row.trips.toLocaleString("fr-FR")}
+                      {row.avg_conso_l_100km.toLocaleString("fr-FR")}
                     </TableCell>
                   </TableRow>
                 ))

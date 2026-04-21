@@ -1,8 +1,8 @@
 import * as React from "react"
 import { Bar, BarChart, CartesianGrid, LabelList, XAxis } from "recharts"
-import { Loader2 } from "lucide-react"
+import { Loader2, Search, X } from "lucide-react"
 import { DashboardLayoutHeader } from "@/layouts/components/DashboardLayoutHeader"
-import { useDashboardKpis } from "@/hooks/use-dashboard-kpis"
+
 import {
   Card,
   CardContent,
@@ -33,10 +33,19 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { useKpi8 } from "@/hooks/use-kpi-8"
+import { daysAgo, toISODate } from "@/lib/utils"
 
 type Row = {
-  vehicle: string
-  vmax_kmh: number
+  vehicle_id: number;
+  immatriculation: string;
+  vitesse_max_kmh: number;
+  alerte_vitesse: {
+    code_couleur: string;
+    statut: string;
+    action_requise: string;
+    severite: string;
+  };
 }
 
 const chartConfig = {
@@ -54,31 +63,63 @@ function formatFr(value: number, min = 1, max = 1) {
 }
 
 export default function VitesseMaxVehiculePage() {
-  const { kpis, loading, error } = useDashboardKpis()
-  const rows = (kpis?.kpi8_vitesse_max_par_vehicule ?? []) as Row[]
+  const { kpi8, loading, error, page, setPage, dateEnd, reset, search, dateStart } = useKpi8()
+  const rows = (kpi8?.kpi ?? []) as Row[]
+  // console.log(kpi8);
+
 
   const [query, setQuery] = React.useState("")
   const [minSpeed, setMinSpeed] = React.useState(0)
   const [sortBy, setSortBy] = React.useState<"speed_desc" | "speed_asc" | "vehicle_asc">("speed_desc")
+  const [localStart, setLocalStart] = React.useState(dateStart)
+  const [localEnd, setLocalEnd] = React.useState(dateEnd)
+  const [validationError, setValidationError] = React.useState<string | null>(null)
+
 
   const filteredRows = React.useMemo(() => {
     const q = query.trim().toLowerCase()
     const base = rows
-      .filter((r) => r.vmax_kmh >= minSpeed)
-      .filter((r) => (!q ? true : (r.vehicle ?? "").toLowerCase().includes(q)))
+      .filter((r) => r.vitesse_max_kmh >= minSpeed)
+      .filter((r) => (!q ? true : (r.immatriculation ?? "").toLowerCase().includes(q)))
 
-    if (sortBy === "speed_asc") return [...base].sort((a, b) => a.vmax_kmh - b.vmax_kmh)
-    if (sortBy === "vehicle_asc") return [...base].sort((a, b) => a.vehicle.localeCompare(b.vehicle))
-    return [...base].sort((a, b) => b.vmax_kmh - a.vmax_kmh)
+    if (sortBy === "speed_asc") return [...base].sort((a, b) => a.vitesse_max_kmh - b.vitesse_max_kmh)
+    if (sortBy === "vehicle_asc") return [...base].sort((a, b) => a.immatriculation.localeCompare(b.immatriculation))
+    return [...base].sort((a, b) => b.vitesse_max_kmh - a.vitesse_max_kmh)
   }, [minSpeed, query, rows, sortBy])
 
-  const maxSpeed = filteredRows.length ? Math.max(...filteredRows.map((r) => r.vmax_kmh)) : 0
+  const maxSpeed = filteredRows.length ? Math.max(...filteredRows.map((r) => r.vitesse_max_kmh)) : 0
   const avgSpeed =
     filteredRows.length > 0
-      ? filteredRows.reduce((sum, r) => sum + r.vmax_kmh, 0) / filteredRows.length
+      ? filteredRows.reduce((sum, r) => sum + r.vitesse_max_kmh, 0) / filteredRows.length
       : 0
 
-  if (loading && !kpis) {
+
+
+  // -------------------------------------------------------------------------
+  // Soumission du formulaire de dates
+  // -------------------------------------------------------------------------
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault()
+    if (!localStart || !localEnd) {
+      setValidationError("Veuillez renseigner les deux dates.")
+      return
+    }
+    if (localStart > localEnd) {
+      setValidationError("La date de début doit être antérieure à la date de fin.")
+      return
+    }
+    setValidationError(null)
+    search(localStart, localEnd) // ← appelle le hook
+  }
+
+  function handleReset() {
+    reset() // ← appelle le hook
+    setLocalStart(daysAgo(90))
+    setLocalEnd(toISODate(new Date()))
+    setValidationError(null)
+  }
+
+  if (loading) {
     return (
       <div className="p-4 text-sm text-muted-foreground text-center items-center justify-center flex h-screen gap-2">
         <Loader2 className="w-4 h-4 animate-spin" /> Chargement des KPI...
@@ -166,12 +207,79 @@ export default function VitesseMaxVehiculePage() {
 
             <div className="grid gap-1">
               <div className="text-sm text-muted-foreground">Recherche</div>
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Immatriculation véhicule..."
-                className="w-full md:w-[320px]"
-              />
+              <form
+                onSubmit={handleSearch}
+                className="flex flex-col gap-4 md:flex-row md:items-end"
+              >
+                {/* Date début */}
+                <div className="grid gap-1.5">
+                  <label
+                    htmlFor="date-start"
+                    className="text-sm font-medium text-muted-foreground"
+                  >
+                    Date de début
+                  </label>
+                  <Input
+                    id="date-start"
+                    type="date"
+                    value={localStart}        // ← local
+                    max={localEnd}
+                    onChange={(e) => {
+                      setLocalStart(e.target.value)  // ← local
+                      setValidationError(null)
+                    }}
+                    className="w-full md:w-[200px]"
+                  />
+                </div>
+
+                {/* Séparateur visuel */}
+                <span className="hidden text-muted-foreground md:block md:pb-2">→</span>
+
+                {/* Date fin */}
+                <div className="grid gap-1.5">
+                  <label
+                    htmlFor="date-end"
+                    className="text-sm font-medium text-muted-foreground"
+                  >
+                    Date de fin
+                  </label>
+                  <Input
+                    id="date-end"
+                    type="date"
+                    value={localEnd}          // ← local
+                    min={localStart}
+                    max={toISODate(new Date())}
+                    onChange={(e) => {
+                      setLocalEnd(e.target.value)    // ← local
+                      setValidationError(null)
+                    }}
+                    className="w-full md:w-[200px]"
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 md:pb-0">
+                  <Button type="submit" disabled={loading} className="gap-2">
+                    {loading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                    {loading ? "Chargement…" : "Rechercher"}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleReset}
+                    disabled={loading}
+                    className="gap-2"
+                  >
+                    <X className="h-4 w-4" />
+                    Réinitialiser
+                  </Button>
+                </div>
+              </form>
             </div>
           </div>
 
@@ -230,7 +338,7 @@ export default function VitesseMaxVehiculePage() {
                     />
                   }
                 />
-                <Bar dataKey="vmax_kmh" fill="var(--color-vmax_kmh)" radius={8}>
+                <Bar dataKey="vitesse_max_kmh" fill="var(--color-vmax_kmh)" radius={8}>
                   <LabelList
                     position="top"
                     offset={12}
@@ -257,11 +365,11 @@ export default function VitesseMaxVehiculePage() {
             </TableHeader>
             <TableBody>
               {filteredRows.length ? (
-                filteredRows.map((row) => (
-                  <TableRow key={row.vehicle}>
-                    <TableCell className="font-medium">{row.vehicle}</TableCell>
+                filteredRows.map((row, index) => (
+                  <TableRow key={`${row.vehicle_id}-${index}`}>
+                    <TableCell className="font-medium">{row.immatriculation}</TableCell>
                     <TableCell className="text-right font-medium">
-                      {row.vmax_kmh.toLocaleString("fr-FR", {
+                      {row.vitesse_max_kmh.toLocaleString("fr-FR", {
                         minimumFractionDigits: 1,
                         maximumFractionDigits: 1,
                       })}
@@ -279,6 +387,70 @@ export default function VitesseMaxVehiculePage() {
           </Table>
         </CardContent>
       </Card>
+
+
+      {/* Pagination */}
+      {kpi8?.meta && kpi8.meta.last_page > 1 && (
+        <div className="flex items-center justify-between px-2">
+          <div className="text-sm text-muted-foreground">
+            Page <span className="font-medium text-foreground">{kpi8.meta.current_page}</span>{" "}
+            sur{" "}
+            <span className="font-medium text-foreground">{kpi8.meta.last_page}</span>
+            {" · "}
+            <span className="font-medium text-foreground">{kpi8.meta.total}</span> résultats
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1 || loading}
+            >
+              ← Précédent
+            </Button>
+
+            {/* Pages numérotées */}
+            <div className="flex items-center gap-1">
+              {Array.from({ length: kpi8.meta.last_page }, (_, i) => i + 1)
+                .filter((p) => p === 1 || p === kpi8.meta.last_page || Math.abs(p - page) <= 1)
+                .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+                  if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("...");
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((p, idx) =>
+                  p === "..." ? (
+                    <span key={`ellipsis-${idx}`} className="px-1 text-muted-foreground">
+                      …
+                    </span>
+                  ) : (
+                    <Button
+                      key={p}
+                      variant={p === page ? "default" : "outline"}
+                      size="sm"
+                      className="w-8 px-0"
+                      onClick={() => setPage(p as number)}
+                      disabled={loading}
+                    >
+                      {p}
+                    </Button>
+                  )
+                )}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(kpi8.meta.last_page, p + 1))}
+              disabled={page >= kpi8.meta.last_page || loading}
+            >
+              Suivant →
+            </Button>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

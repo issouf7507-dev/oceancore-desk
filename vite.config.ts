@@ -12,3 +12,8 @@ export default defineConfig({
     },
   },
 });
+
+// {
+//   "email": "manager@ocean.services",
+//   "password": "mdpmanager@@"
+//   }

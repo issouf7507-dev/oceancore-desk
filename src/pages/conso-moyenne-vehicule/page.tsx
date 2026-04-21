@@ -1,7 +1,7 @@
 import * as React from "react"
 import { Bar, BarChart, CartesianGrid, LabelList, XAxis } from "recharts"
 import { DashboardLayoutHeader } from "@/layouts/components/DashboardLayoutHeader"
-import { useDashboardKpis } from "@/hooks/use-dashboard-kpis"
+
 import {
   Card,
   CardContent,
@@ -32,12 +32,15 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
+import { useKpi4 } from "@/hooks/use-kpi-4"
+import { Loader2, Search, X } from "lucide-react"
+import { daysAgo, toISODate } from "@/lib/utils"
 
 type Row = {
-  vehicle_gps: string
-  conso_l_100km: number
-  km_total: number
-  immatriculation: string
+  vehicule_id: number;
+  immatriculation: string;
+  km_total: number;
+  conso_l_100km: number;
 }
 
 const chartConfig = {
@@ -55,8 +58,11 @@ function formatFr(value: number, min = 2, max = 2) {
 }
 
 export default function ConsoMoyenneVehiculePage() {
-  const { kpis, loading, error } = useDashboardKpis()
-  const rows = (kpis?.kpi4_ecart_kilometrage_excel_vs_gps ?? []) as Row[]
+  const { kpi4, loading, error, page, setPage, dateStart, dateEnd, search, reset } = useKpi4()
+  console.log(kpi4);
+
+  const rows = (kpi4?.kpi ?? []) as Row[]
+
 
   const [query, setQuery] = React.useState("")
   const [minKm, setMinKm] = React.useState(0)
@@ -64,15 +70,20 @@ export default function ConsoMoyenneVehiculePage() {
     "conso_desc" | "conso_asc" | "km_desc" | "vehicle_asc"
   >("conso_desc")
 
+  const [localStart, setLocalStart] = React.useState(dateStart)
+  const [localEnd, setLocalEnd] = React.useState(dateEnd)
+
+  const [validationError, setValidationError] = React.useState<string | null>(null)
+
   const filteredRows = React.useMemo(() => {
     const q = query.trim().toLowerCase()
     const base = rows
       .filter((r) => r.km_total >= minKm)
-      .filter((r) => (!q ? true : r.vehicle_gps.toLowerCase().includes(q)))
+      .filter((r) => (!q ? true : r.vehicule_id.toString().toLowerCase().includes(q)))
 
     if (sortBy === "conso_asc") return [...base].sort((a, b) => a.conso_l_100km - b.conso_l_100km)
     if (sortBy === "km_desc") return [...base].sort((a, b) => b.km_total - a.km_total)
-    if (sortBy === "vehicle_asc") return [...base].sort((a, b) => a.vehicle_gps.localeCompare(b.vehicle_gps))
+    // if (sortBy === "vehicle_asc") return [...base].sort((a, b) => a.vehicule_id.toString().localeCompare(b.vehicule_id))
     return [...base].sort((a, b) => b.conso_l_100km - a.conso_l_100km)
   }, [minKm, query, rows, sortBy])
 
@@ -82,8 +93,36 @@ export default function ConsoMoyenneVehiculePage() {
       : 0
   const totalKm = filteredRows.reduce((sum, r) => sum + r.km_total, 0)
 
-  if (loading && !kpis) {
-    return <div className="p-4 text-sm text-muted-foreground">Chargement des KPI...</div>
+
+
+  // -------------------------------------------------------------------------
+  // Soumission du formulaire de dates
+  // -------------------------------------------------------------------------
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault()
+    if (!localStart || !localEnd) {
+      setValidationError("Veuillez renseigner les deux dates.")
+      return
+    }
+    if (localStart > localEnd) {
+      setValidationError("La date de début doit être antérieure à la date de fin.")
+      return
+    }
+    setValidationError(null)
+    search(localStart, localEnd) // ← appelle le hook
+  }
+
+  function handleReset() {
+    reset() // ← appelle le hook
+    setLocalStart(daysAgo(90))
+    setLocalEnd(toISODate(new Date()))
+    setValidationError(null)
+  }
+
+
+  if (loading) {
+    return <div className="p-4 text-sm text-muted-foreground text-center items-center justify-center flex h-screen gap-2">
+      <Loader2 className="w-4 h-4 animate-spin" /> Chargement des KPI...</div>
   }
   if (error) {
     return <div className="p-4 text-sm text-red-500">Erreur: {error}</div>
@@ -166,12 +205,79 @@ export default function ConsoMoyenneVehiculePage() {
 
             <div className="grid gap-1">
               <div className="text-sm text-muted-foreground">Recherche</div>
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="GPS véhicule..."
-                className="w-full md:w-[320px]"
-              />
+              <form
+                onSubmit={handleSearch}
+                className="flex flex-col gap-4 md:flex-row md:items-end"
+              >
+                {/* Date début */}
+                <div className="grid gap-1.5">
+                  <label
+                    htmlFor="date-start"
+                    className="text-sm font-medium text-muted-foreground"
+                  >
+                    Date de début
+                  </label>
+                  <Input
+                    id="date-start"
+                    type="date"
+                    value={localStart}        // ← local
+                    max={localEnd}
+                    onChange={(e) => {
+                      setLocalStart(e.target.value)  // ← local
+                      setValidationError(null)
+                    }}
+                    className="w-full md:w-[200px]"
+                  />
+                </div>
+
+                {/* Séparateur visuel */}
+                <span className="hidden text-muted-foreground md:block md:pb-2">→</span>
+
+                {/* Date fin */}
+                <div className="grid gap-1.5">
+                  <label
+                    htmlFor="date-end"
+                    className="text-sm font-medium text-muted-foreground"
+                  >
+                    Date de fin
+                  </label>
+                  <Input
+                    id="date-end"
+                    type="date"
+                    value={localEnd}          // ← local
+                    min={localStart}
+                    max={toISODate(new Date())}
+                    onChange={(e) => {
+                      setLocalEnd(e.target.value)    // ← local
+                      setValidationError(null)
+                    }}
+                    className="w-full md:w-[200px]"
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 md:pb-0">
+                  <Button type="submit" disabled={loading} className="gap-2">
+                    {loading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                    {loading ? "Chargement…" : "Rechercher"}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleReset}
+                    disabled={loading}
+                    className="gap-2"
+                  >
+                    <X className="h-4 w-4" />
+                    Réinitialiser
+                  </Button>
+                </div>
+              </form>
             </div>
           </div>
 
@@ -268,7 +374,7 @@ export default function ConsoMoyenneVehiculePage() {
             <TableBody>
               {filteredRows.length ? (
                 filteredRows.map((row) => (
-                  <TableRow key={row.vehicle_gps}>
+                  <TableRow key={row.vehicule_id}>
                     <TableCell className="font-medium">{row.immatriculation}</TableCell>
                     <TableCell className="text-right font-medium">
                       {row.conso_l_100km.toLocaleString("fr-FR", {
@@ -295,6 +401,69 @@ export default function ConsoMoyenneVehiculePage() {
           </Table>
         </CardContent>
       </Card>
+
+
+      {/* Pagination */}
+      {kpi4?.meta && kpi4.meta.last_page > 1 && (
+        <div className="flex items-center justify-between px-2">
+          <div className="text-sm text-muted-foreground">
+            Page <span className="font-medium text-foreground">{kpi4.meta.current_page}</span>{" "}
+            sur{" "}
+            <span className="font-medium text-foreground">{kpi4.meta.last_page}</span>
+            {" · "}
+            <span className="font-medium text-foreground">{kpi4.meta.total}</span> résultats
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1 || loading}
+            >
+              ← Précédent
+            </Button>
+
+            {/* Pages numérotées */}
+            <div className="flex items-center gap-1">
+              {Array.from({ length: kpi4.meta.last_page }, (_, i) => i + 1)
+                .filter((p) => p === 1 || p === kpi4.meta.last_page || Math.abs(p - page) <= 1)
+                .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+                  if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("...");
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((p, idx) =>
+                  p === "..." ? (
+                    <span key={`ellipsis-${idx}`} className="px-1 text-muted-foreground">
+                      …
+                    </span>
+                  ) : (
+                    <Button
+                      key={p}
+                      variant={p === page ? "default" : "outline"}
+                      size="sm"
+                      className="w-8 px-0"
+                      onClick={() => setPage(p as number)}
+                      disabled={loading}
+                    >
+                      {p}
+                    </Button>
+                  )
+                )}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(kpi4.meta.last_page, p + 1))}
+              disabled={page >= kpi4.meta.last_page || loading}
+            >
+              Suivant →
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
