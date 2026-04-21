@@ -270,6 +270,7 @@ export default function EcoScoreChauffeursPage() {
                   </Button>
                 </div>
               </form>
+              {validationError && validationError}
             </div>
           </div>
 

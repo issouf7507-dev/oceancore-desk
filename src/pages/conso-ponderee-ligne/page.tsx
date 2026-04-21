@@ -279,6 +279,8 @@ export default function ConsoPondereeLignePage() {
                   </Button>
                 </div>
               </form>
+
+              {validationError && validationError}
             </div>
           </div>
 

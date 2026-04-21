@@ -278,6 +278,8 @@ export default function ConsoMoyenneVehiculePage() {
                   </Button>
                 </div>
               </form>
+
+              {validationError && validationError}
             </div>
           </div>
 

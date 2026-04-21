@@ -272,6 +272,8 @@ export default function TrajetsAnormauxPage() {
                                 </Button>
                             </div>
                         </form>
+
+                        {validationError && validationError}
                     </div>
 
                     <Table>

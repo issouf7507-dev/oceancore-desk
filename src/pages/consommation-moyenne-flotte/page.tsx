@@ -43,18 +43,9 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-interface KpiRow {
-  date: string
-  conso_l_100km: number
-  total_litres: number
-  total_km: number
-  nb_voyages: number
-}
 
-interface KpiResponse {
-  kpi: KpiRow[]
-  period?: { start?: string; end?: string }
-}
+
+
 
 function formatFr(value: number, min = 2, max = 2) {
   return value.toLocaleString("fr-FR", {
@@ -66,29 +57,7 @@ function formatFr(value: number, min = 2, max = 2) {
 
 
 
-function useKpi1Range() {
-  const [data, setData] = React.useState<KpiResponse | null>(null)
-  const [loading, setLoading] = React.useState(false)
-  const [error, setError] = React.useState<string | null>(null)
 
-  const fetch_ = React.useCallback(async (start: string, end: string) => {
-    setLoading(true)
-    setError(null)
-    try {
-      const params = new URLSearchParams({ start, end })
-      const res = await fetch(`/api/kpi/1?${params.toString()}`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const json: KpiResponse = await res.json()
-      setData(json)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue")
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  return { data, loading, error, fetch_ }
-}
 
 export default function ConsommationMoyenneFlottePage() {
   // const { kpi1, loading, error, page, setPage } = useKpi1()
@@ -97,7 +66,7 @@ export default function ConsommationMoyenneFlottePage() {
   // console.log(kpi1);
 
   const [timeRange, setTimeRange] = React.useState<"90d" | "30d" | "7d">("90d")
-  const [query, setQuery] = React.useState("")
+  // const [query, setQuery] = React.useState("")
   const [sortBy, setSortBy] = React.useState<"date_desc" | "conso_desc" | "conso_asc">("date_desc")
   const [localStart, setLocalStart] = React.useState(dateStart)
   const [localEnd, setLocalEnd] = React.useState(dateEnd)
@@ -120,10 +89,10 @@ export default function ConsommationMoyenneFlottePage() {
     const startDate = new Date(referenceDate)
     startDate.setDate(startDate.getDate() - daysToSubtract)
 
-    const q = query.trim().toLowerCase()
+    // const q = query.trim().toLowerCase()
     const base = rows
       .filter((r) => new Date(r.date).getTime() >= startDate.getTime())
-      .filter((r) => (!q ? true : r.date.toLowerCase().includes(q)))
+
 
     if (sortBy === "conso_desc") {
       return [...base].sort((a, b) => b.conso_l_100km - a.conso_l_100km)
@@ -134,7 +103,7 @@ export default function ConsommationMoyenneFlottePage() {
     return [...base].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
     )
-  }, [query, referenceDate, rows, sortBy, timeRange])
+  }, [, referenceDate, rows, sortBy, timeRange])
 
   const avgConso =
     filteredRows.length > 0
@@ -330,6 +299,8 @@ export default function ConsommationMoyenneFlottePage() {
                     Réinitialiser
                   </Button>
                 </div>
+
+                {validationError && validationError}
               </form>
             </div>
           </div>

@@ -60,11 +60,11 @@ export function AuthFormSplitScreen({
   imageSrc,
   imageAlt,
   onSubmit,
-  forgotPasswordHref,
+
   createAccountHref,
   form,
   errorForm,
-  setErrorForm
+
 }: AuthFormSplitScreenProps) {
   const [isLoading, setIsLoading] = React.useState(false);
 

@@ -255,6 +255,8 @@ export default function FrequenceRavitaillementsPage() {
                   </Button>
                 </div>
               </form>
+
+              {validationError && validationError}
             </div>
           </div>
 

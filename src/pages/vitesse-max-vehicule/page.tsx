@@ -280,6 +280,8 @@ export default function VitesseMaxVehiculePage() {
                   </Button>
                 </div>
               </form>
+
+              {validationError && validationError}
             </div>
           </div>
 
