@@ -15,3 +15,4 @@ createRoot(document.getElementById('root')!).render(
     </AuthProvider>
   </StrictMode>,
 )
+// VITE_API_URL="https://oceanadminer.marabu.services"
