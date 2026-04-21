@@ -9,7 +9,7 @@ export function ForgotPassword() {
       id='kt_login_password_reset_form'
     >
 
-      {/* end::Form group */}
+
     </form>
   )
 }
