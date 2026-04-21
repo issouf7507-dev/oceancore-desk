@@ -65,7 +65,7 @@ function formatFr(value: number, min = 1, max = 1) {
 export default function VitesseMaxVehiculePage() {
   const { kpi8, loading, error, page, setPage, dateEnd, reset, search, dateStart } = useKpi8()
   const rows = (kpi8?.kpi ?? []) as Row[]
-  // console.log(kpi8);
+
 
 
   const [query, setQuery] = React.useState("")
