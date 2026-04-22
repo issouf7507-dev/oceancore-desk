@@ -22,19 +22,6 @@ export type DashboardKpisNormalized = {
     conso_l_100km: number;
     km_total: number;
     immatriculation: string;
-
-    // conso_l_100km
-    // :
-    // 25
-    // immatriculation
-    // :
-    // "3611LE01"
-    // total_km
-    // :
-    // 300
-    // vehicule_id
-    // :
-    // 8
   }>;
   kpi5_indice_anomalie_trips: Array<{
     nb_anomalies: number;
