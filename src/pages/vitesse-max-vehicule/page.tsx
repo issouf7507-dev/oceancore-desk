@@ -95,9 +95,9 @@ export default function VitesseMaxVehiculePage() {
 
 
 
-  // -------------------------------------------------------------------------
+  // --------------------------------------------------------------------
   // Soumission du formulaire de dates
-  // -------------------------------------------------------------------------
+  // --------------------------------------------------------------------
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
     if (!localStart || !localEnd) {
