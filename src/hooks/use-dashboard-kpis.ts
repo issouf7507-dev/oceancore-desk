@@ -11,7 +11,6 @@ import {
   fetchDashboardKpi_7,
   fetchDashboardKpi_8,
   fetchDashboardKpi_9,
-  fetchDashboardKpis,
   type DashboardKpi10Normalized,
   type DashboardKpi1Normalized,
   type DashboardKpi2Normalized,
@@ -52,7 +51,7 @@ export function useDashboardKpis() {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchDashboardKpis(token);
+      // const data = await fetchDashboardKpis(token);
       const kpi_1 = await fetchDashboardKpi_1(token);
       const kpi_2 = await fetchDashboardKpi_2(token);
       const kpi_3 = await fetchDashboardKpi_3(token);
@@ -67,7 +66,7 @@ export function useDashboardKpis() {
       const kpi_9 = await fetchDashboardKpi_9(token);
       const kpi_10 = await fetchDashboardKpi_10(token);
 
-      setKpis(data);
+      // setKpis(data);
       setKpi1(kpi_1);
       setKpi2(kpi_2);
       setKpi3(kpi_3);
