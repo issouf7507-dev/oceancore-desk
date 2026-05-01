@@ -21,14 +21,13 @@ import {
   type DashboardKpi7Normalized,
   type DashboardKpi8Normalized,
   type DashboardKpi9Normalized,
-  type DashboardKpisNormalized,
 } from "@/services/dashboardKpisService";
 
 export function useDashboardKpis() {
   const { auth } = useAuth();
   const token = auth?.api_token;
 
-  const [kpis, setKpis] = React.useState<DashboardKpisNormalized | null>(null);
+  // const [kpis, setKpis] = React.useState<DashboardKpisNormalized | null>(null);
   const [kpi1, setKpi1] = React.useState<DashboardKpi1Normalized | null>(null);
   const [kpi2, setKpi2] = React.useState<DashboardKpi2Normalized | null>(null);
   const [kpi3, setKpi3] = React.useState<DashboardKpi3Normalized | null>(null);
@@ -92,7 +91,7 @@ export function useDashboardKpis() {
   }, [load]);
 
   return {
-    kpis,
+    // kpis,
     kpi1,
     kpi2,
     kpi3,
