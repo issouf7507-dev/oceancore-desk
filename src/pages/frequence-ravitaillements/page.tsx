@@ -25,9 +25,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { Loader2, Search, X } from "lucide-react"
+import { Download, Loader2, Search, X } from "lucide-react"
 import { useKpi6 } from "@/hooks/use-kpi-6"
 import { daysAgo, toISODate } from "@/lib/utils"
+import { exportToExcel } from "@/lib/export-excel"
 
 type Row = {
   vehicule_id: string;
@@ -58,6 +59,7 @@ export default function FrequenceRavitaillementsPage() {
     const q = query.trim().toLowerCase()
     const list = rows
       .filter((r) => r.nb_pleins >= minPleins && r.nb_voyages >= minVoyages)
+      .filter((r) => (!q ? true : r.immatriculation.toLowerCase().includes(q)))
       .filter((r) => {
         if (!q) return true
         return (
@@ -74,6 +76,36 @@ export default function FrequenceRavitaillementsPage() {
     }
     return [...list].sort((a, b) => b.nb_pleins - a.nb_pleins)
   }, [minPleins, minVoyages, query, rows, sortBy])
+
+
+  function handleExport() {
+    exportToExcel(
+      filteredRows,
+      [
+        {
+          header: "Immatriculation",
+          key: "immatriculation",
+          format: (v) => v || "—",
+        },
+        {
+          header: "Nb pleins",
+          key: "nb_pleins",
+        },
+        {
+          header: "Nb voyages",
+          key: "nb_voyages",
+        },
+        {
+          header: "Source",
+          key: "source",
+        },
+      ],
+      `ravitaillements_${localStart}_${localEnd}`,
+      "Fréquence ravitaillements",
+    )
+  }
+
+
 
   if (loading) {
     return <div className="p-4 text-sm text-muted-foreground text-center items-center justify-center flex h-screen gap-2">
@@ -122,8 +154,18 @@ export default function FrequenceRavitaillementsPage() {
           <CardDescription>Données mobile </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="grid gap-1">
+            <div className="text-sm text-muted-foreground">Véhicule</div>
+            <Input
+              placeholder="Ex: AB-123-CD"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="w-[180px]"
+            />
+          </div>
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div className="flex flex-col gap-2 md:flex-row md:items-end">
+
               <div className="grid gap-1">
                 <div className="text-sm text-muted-foreground">Min pleins</div>
                 <Select
@@ -253,6 +295,17 @@ export default function FrequenceRavitaillementsPage() {
                     <X className="h-4 w-4" />
                     Réinitialiser
                   </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleExport}
+                    disabled={filteredRows.length === 0}
+                    className="gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Exporter ({filteredRows.length})
+                  </Button>
                 </div>
               </form>
 
@@ -267,24 +320,13 @@ export default function FrequenceRavitaillementsPage() {
                 {filteredRows.length}
               </span>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setQuery("")
-                setMinPleins(0)
-                setMinVoyages(0)
-                setSortBy("pleins_desc")
-              }}
-            >
-              Réinitialiser
-            </Button>
+
           </div>
 
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Véhicule (GPS)</TableHead>
+                {/* <TableHead>Véhicule (GPS)</TableHead> */}
                 <TableHead>Immatriculation</TableHead>
                 <TableHead className="text-right">Nb pleins</TableHead>
                 <TableHead className="text-right">Nb voyages</TableHead>
@@ -294,7 +336,7 @@ export default function FrequenceRavitaillementsPage() {
               {filteredRows.length ? (
                 filteredRows.map((row) => (
                   <TableRow key={`${row.vehicule_id}-${row.source}`}>
-                    <TableCell className="font-medium">{row.immatriculation}</TableCell>
+                    {/* <TableCell className="font-medium">{row.immatriculation}</TableCell> */}
                     <TableCell>{row.immatriculation || "—"}</TableCell>
                     <TableCell className="text-right">
                       {row.nb_pleins.toLocaleString("fr-FR")}

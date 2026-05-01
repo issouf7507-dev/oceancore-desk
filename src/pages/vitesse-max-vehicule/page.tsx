@@ -167,6 +167,15 @@ export default function VitesseMaxVehiculePage() {
           <CardDescription>Filtres BI + visualisation</CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="grid gap-1">
+            <div className="text-sm text-muted-foreground">Véhicule</div>
+            <Input
+              placeholder="Ex: AB-123-CD"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="w-[180px]"
+            />
+          </div>
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div className="flex flex-col gap-2 md:flex-row md:items-end">
               <div className="grid gap-1">
@@ -290,17 +299,7 @@ export default function VitesseMaxVehiculePage() {
               Résultats:{" "}
               <span className="text-foreground font-medium">{filteredRows.length}</span>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setQuery("")
-                setMinSpeed(0)
-                setSortBy("speed_desc")
-              }}
-            >
-              Réinitialiser
-            </Button>
+
           </div>
 
           <div className="mt-4">

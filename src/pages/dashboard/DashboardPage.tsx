@@ -3,6 +3,7 @@ import { Area, AreaChart, CartesianGrid, XAxis, Label, PolarGrid, PolarRadiusAxi
 import { Loader2, TrendingUp } from "lucide-react"
 import { Link } from "react-router-dom"
 import { DashboardLayoutHeader } from '@/layouts/components/DashboardLayoutHeader'
+import { handleApiError } from "@/helpers/handleapierror"
 import {
   Card,
   CardContent,
@@ -38,6 +39,7 @@ import {
 // import { useDashboardKpis } from "@/hooks/use-dashboard-kpis"
 import { Button } from "@/components/ui/button"
 import { useDashboardHome } from "@/hooks/use-dashboard-home"
+import { useEffect } from "react"
 
 
 
@@ -390,7 +392,7 @@ function KPI7EcoScoreTop5List({
     }[];
   }
 }) {
-  const data = rows?.top ?? []
+  const data = rows?.top.slice(0, 20) ?? []
   return (
     <Card>
       <CardHeader>
@@ -845,7 +847,16 @@ export function DashboardPage() {
 
   const { loading, errors, kpi1, kpi2, kpi3, kpi4, kpi5, kpi6, kpi7, kpi8, kpi9, kpi10 } = useDashboardHome()
   // console.log("ada", ada)
-  console.log("kpi4", kpi4)
+  // console.log("kpi4", kpi4)
+
+
+
+  useEffect(() => {
+    const has401 = Object.values(errors).some(
+      (e: any) => e?.status === 401 || e?.response?.status === 401
+    )
+    if (has401) handleApiError({ status: 401 }, "/")
+  }, [errors])
 
   if (loading) {
     return <div className="p-4 text-sm text-muted-foreground text-center items-center justify-center flex h-screen gap-2">

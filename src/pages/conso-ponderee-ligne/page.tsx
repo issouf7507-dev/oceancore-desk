@@ -1,6 +1,6 @@
 import * as React from "react"
 import { Bar, BarChart, CartesianGrid, LabelList, XAxis } from "recharts"
-import { Loader2, Search, X } from "lucide-react"
+import { Download, Loader2, Search, X } from "lucide-react"
 import { DashboardLayoutHeader } from "@/layouts/components/DashboardLayoutHeader"
 
 import {
@@ -35,6 +35,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useKpi9 } from "@/hooks/use-kpi-9"
 import { daysAgo, toISODate } from "@/lib/utils"
+import { exportToExcel } from "@/lib/export-excel"
 
 type Row = {
   ligne_id: number;
@@ -128,7 +129,28 @@ export default function ConsoPondereeLignePage() {
     setLocalEnd(toISODate(new Date()))
     setValidationError(null)
   }
-
+  function handleExport() {
+    exportToExcel(
+      filteredRows,
+      [
+        {
+          header: "Ligne",
+          key: "code_ligne",
+          format: (v) => v || "—",
+        },
+        {
+          header: "Coeff. bagages",
+          key: "coefficient_charge_bagages",
+        },
+        {
+          header: "Conso pondérée (L/100km)",
+          key: "conso_ponderee_l_100km",
+        },
+      ],
+      `conso-ponderee-ligne_${localStart}_${localEnd}`,
+      "Conso pondérée par ligne",
+    )
+  }
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
@@ -167,6 +189,15 @@ export default function ConsoPondereeLignePage() {
           <CardDescription>Filtres BI + visualisation</CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="grid gap-1">
+            <div className="text-sm text-muted-foreground">Ligne</div>
+            <Input
+              placeholder="Ex: L1"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="w-[180px]"
+            />
+          </div>
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div className="flex flex-col gap-2 md:flex-row md:items-end">
               <div className="grid gap-1">
@@ -277,6 +308,17 @@ export default function ConsoPondereeLignePage() {
                     <X className="h-4 w-4" />
                     Réinitialiser
                   </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleExport}
+                    disabled={filteredRows.length === 0}
+                    className="gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Exporter ({filteredRows.length})
+                  </Button>
                 </div>
               </form>
 
@@ -288,17 +330,7 @@ export default function ConsoPondereeLignePage() {
             <div className="text-sm text-muted-foreground">
               Résultats: <span className="text-foreground font-medium">{filteredRows.length}</span>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setQuery("")
-                setMinCoeff(0)
-                setSortBy("conso_desc")
-              }}
-            >
-              Réinitialiser
-            </Button>
+
           </div>
 
           <div className="mt-4">

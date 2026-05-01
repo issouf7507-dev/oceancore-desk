@@ -1,6 +1,8 @@
 import * as React from "react"
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
 import { DashboardLayoutHeader } from "@/layouts/components/DashboardLayoutHeader"
+// import * as XLSX from "xlsx"
+
 
 import {
   Card,
@@ -32,9 +34,10 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Loader2, Search, X } from "lucide-react"
+import { Download, Loader2, Search, X } from "lucide-react"
 import { useKpi1 } from "@/hooks/use-kpi-1"
 import { daysAgo, toISODate } from "@/lib/utils"
+import { exportToExcel } from "@/lib/export-excel"
 
 const chartConfig = {
   conso_l_100km: {
@@ -111,6 +114,40 @@ export default function ConsommationMoyenneFlottePage() {
       : 0
   const totalLitres = filteredRows.reduce((sum, r) => sum + r.total_litres, 0)
   const totalKm = filteredRows.reduce((sum, r) => sum + r.total_km, 0)
+
+  function handleExport() {
+    exportToExcel(
+      filteredRows,
+      [
+        {
+          header: "Date",
+          key: "date",
+          format: (v) => new Date(v).toLocaleDateString("fr-FR"),
+        },
+        {
+          header: "Conso (L/100km)",
+          key: "conso_l_100km",
+          format: (v) => Number(v.toFixed(2)),
+        },
+        {
+          header: "Total litres",
+          key: "total_litres",
+          format: (v) => Number(v.toFixed(1)),
+        },
+        {
+          header: "Total km",
+          key: "total_km",
+          format: (v) => Number(v.toFixed(1)),
+        },
+        {
+          header: "Nb voyages",
+          key: "nb_voyages",
+        },
+      ],
+      `conso-flotte_${localStart}_${localEnd}`,
+      "Consommation flotte",
+    )
+  }
 
 
   // -------------------------------------------------------------------------
@@ -297,6 +334,17 @@ export default function ConsommationMoyenneFlottePage() {
                   >
                     <X className="h-4 w-4" />
                     Réinitialiser
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleExport}
+                    disabled={filteredRows.length === 0}
+                    className="gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Exporter ({filteredRows.length})
                   </Button>
                 </div>
 

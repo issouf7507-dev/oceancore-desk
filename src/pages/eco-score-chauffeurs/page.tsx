@@ -25,9 +25,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { Loader2, Search, X } from "lucide-react"
+import { Download, Loader2, Search, X } from "lucide-react"
 import { useKpi7 } from "@/hooks/use-kpi-7"
 import { daysAgo, toISODate } from "@/lib/utils"
+import { exportToExcel } from "@/lib/export-excel"
 
 type Row = {
   // driver: string
@@ -115,6 +116,31 @@ export default function EcoScoreChauffeursPage() {
     setValidationError(null)
   }
 
+
+  function handleExport() {
+    exportToExcel(
+      filteredRows,
+      [
+        {
+          header: "Chauffeur",
+          key: "nom",
+          format: (v) => v || "—",
+        },
+        {
+          header: "Eco-score",
+          key: "score",
+        },
+        {
+          header: "Vitesse max",
+          key: "avg_conso_l_100km",
+        },
+      ],
+      `eco-score-chauffeurs_${localStart}_${localEnd}`,
+      "Eco-score chauffeurs",
+    )
+  }
+
+
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
       <DashboardLayoutHeader title="Eco-score chauffeurs" breadcrumb="" />
@@ -152,6 +178,15 @@ export default function EcoScoreChauffeursPage() {
           <CardDescription>Classement des chauffeurs (Top)</CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="grid gap-1">
+            <div className="text-sm text-muted-foreground">Chauffeur</div>
+            <Input
+              placeholder="Ex: John Doe"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="w-[180px]"
+            />
+          </div>
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div className="flex flex-col gap-2 md:flex-row md:items-end">
               <div className="grid gap-1">
@@ -268,6 +303,19 @@ export default function EcoScoreChauffeursPage() {
                     <X className="h-4 w-4" />
                     Réinitialiser
                   </Button>
+
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleExport}
+                    disabled={filteredRows.length === 0}
+                    className="gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Exporter ({filteredRows.length})
+                  </Button>
+
                 </div>
               </form>
               {validationError && validationError}

@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2 } from "lucide-react";
+import { EyeOff, Eye, Loader2 } from "lucide-react";
 
 // Validation schema for the form
 const formSchema = z.object({
@@ -67,7 +67,7 @@ export function AuthFormSplitScreen({
 
 }: AuthFormSplitScreenProps) {
   const [isLoading, setIsLoading] = React.useState(false);
-
+  const [showPassword, setShowPassword] = React.useState(false)
 
 
 
@@ -151,12 +151,29 @@ export function AuthFormSplitScreen({
                       <FormItem>
                         <FormLabel>Mot de passe</FormLabel>
                         <FormControl>
-                          <Input
-                            type="password"
-                            placeholder="••••••••••••"
-                            {...field}
-                            disabled={isLoading}
-                          />
+                          <div className="relative">
+                            <Input
+                              type={showPassword ? "text" : "password"}
+                              placeholder="••••••••••••"
+                              {...field}
+                              disabled={isLoading}
+                              className="pr-10"
+                            />
+
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword((v) => !v)}
+                              disabled={isLoading}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                              tabIndex={-1}
+                            >
+                              {showPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>

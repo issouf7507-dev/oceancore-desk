@@ -33,8 +33,9 @@ import {
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { useKpi4 } from "@/hooks/use-kpi-4"
-import { Loader2, Search, X } from "lucide-react"
+import { Download, Loader2, Search, X } from "lucide-react"
 import { daysAgo, toISODate } from "@/lib/utils"
+import { exportToExcel } from "@/lib/export-excel"
 
 type Row = {
   vehicule_id: number;
@@ -65,7 +66,7 @@ export default function ConsoMoyenneVehiculePage() {
 
 
   const [query, setQuery] = React.useState("")
-  const [minKm, setMinKm] = React.useState(0)
+  // const [minKm, setMinKm] = React.useState(0)
   const [sortBy, setSortBy] = React.useState<
     "conso_desc" | "conso_asc" | "km_desc" | "vehicle_asc"
   >("conso_desc")
@@ -78,14 +79,15 @@ export default function ConsoMoyenneVehiculePage() {
   const filteredRows = React.useMemo(() => {
     const q = query.trim().toLowerCase()
     const base = rows
-      .filter((r) => r.km_total >= minKm)
-      .filter((r) => (!q ? true : r.vehicule_id.toString().toLowerCase().includes(q)))
+      // .filter((r) => r.km_total >= minKm)
+      // .filter((r) => (!q ? true : r.vehicule_id.toString().toLowerCase().includes(q)))
+      .filter((r) => (!q ? true : r.immatriculation.toLowerCase().includes(q)))
 
     if (sortBy === "conso_asc") return [...base].sort((a, b) => a.conso_l_100km - b.conso_l_100km)
     if (sortBy === "km_desc") return [...base].sort((a, b) => b.km_total - a.km_total)
     // if (sortBy === "vehicle_asc") return [...base].sort((a, b) => a.vehicule_id.toString().localeCompare(b.vehicule_id))
     return [...base].sort((a, b) => b.conso_l_100km - a.conso_l_100km)
-  }, [minKm, query, rows, sortBy])
+  }, [query, rows, sortBy])
 
   const avgConso =
     filteredRows.length > 0
@@ -118,7 +120,30 @@ export default function ConsoMoyenneVehiculePage() {
     setLocalEnd(toISODate(new Date()))
     setValidationError(null)
   }
-
+  // Dans le composant :
+  function handleExport() {
+    exportToExcel(
+      filteredRows,
+      [
+        {
+          header: "Immatriculation",
+          key: "immatriculation",
+        },
+        {
+          header: "Conso (L/100km)",
+          key: "conso_l_100km",
+          format: (v) => Number(v.toFixed(2)),
+        },
+        {
+          header: "Km total",
+          key: "km_total",
+          format: (v) => Number(v.toFixed(1)),
+        },
+      ],
+      `conso-vehicule_${localStart}_${localEnd}`,
+      "Conso par véhicule",
+    )
+  }
 
   if (loading) {
     return <div className="p-4 text-sm text-muted-foreground text-center items-center justify-center flex h-screen gap-2">
@@ -168,19 +193,15 @@ export default function ConsoMoyenneVehiculePage() {
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div className="flex flex-col gap-2 md:flex-row md:items-end">
               <div className="grid gap-1">
-                <div className="text-sm text-muted-foreground">Km minimum</div>
-                <Select value={String(minKm)} onValueChange={(v) => setMinKm(Number(v))}>
-                  <SelectTrigger className="w-[170px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0">0+</SelectItem>
-                    <SelectItem value="100">100+</SelectItem>
-                    <SelectItem value="200">200+</SelectItem>
-                    <SelectItem value="400">400+</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="text-sm text-muted-foreground">Véhicule</div>
+                <Input
+                  placeholder="Ex: AB-123-CD"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="w-[180px]"
+                />
               </div>
+
 
               <div className="grid gap-1">
                 <div className="text-sm text-muted-foreground">Tri</div>
@@ -276,6 +297,18 @@ export default function ConsoMoyenneVehiculePage() {
                     <X className="h-4 w-4" />
                     Réinitialiser
                   </Button>
+
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleExport}
+                    disabled={filteredRows.length === 0}
+                    className="gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Exporter ({filteredRows.length})
+                  </Button>
                 </div>
               </form>
 
@@ -287,17 +320,7 @@ export default function ConsoMoyenneVehiculePage() {
             <div className="text-sm text-muted-foreground">
               Résultats: <span className="text-foreground font-medium">{filteredRows.length}</span>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setQuery("")
-                setMinKm(0)
-                setSortBy("conso_desc")
-              }}
-            >
-              Réinitialiser
-            </Button>
+
           </div>
 
           <div className="mt-4">
