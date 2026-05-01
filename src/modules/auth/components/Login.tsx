@@ -54,7 +54,7 @@ export function Login() {
       if (!response.ok) {
         const text = await response.text().catch(() => "")
 
-        console.log("error response", response);
+        // console.log("error response", response);
         setErrorForm(true)
 
         toast("Erreur lors de l'authentification")
@@ -70,7 +70,7 @@ export function Login() {
         user: { id: number; name: string; email: string; roles?: string[] }
       }
 
-      console.log(payload);
+      // console.log(payload);
 
 
 

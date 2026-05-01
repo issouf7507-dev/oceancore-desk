@@ -60,7 +60,7 @@ function formatFr(value: number, min = 2, max = 2) {
 
 export default function ConsoMoyenneVehiculePage() {
   const { kpi4, loading, error, page, setPage, dateStart, dateEnd, search, reset } = useKpi4()
-  console.log(kpi4);
+  // console.log(kpi4);
 
   const rows = (kpi4?.kpi ?? []) as Row[]
 
